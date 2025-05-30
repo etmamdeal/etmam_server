@@ -196,8 +196,16 @@ class Product(db.Model):
     # العلاقات
     creator = db.relationship('User', foreign_keys=[created_by], backref='products_created')
     modifier = db.relationship('User', foreign_keys=[last_modified_by], backref='products_modified')
-    # script relationship is now handled by the backref 'associated_script' from Script model
+
+    # Link to Script model for products of type 'script'
+    # This was added/confirmed in a previous step based on audit.
+    script_definition = db.relationship('Script', foreign_keys=[script_id], backref=db.backref('product_link', uselist=False))
+
     subscriptions = db.relationship('Subscription', backref='product', lazy='dynamic')
+
+    # Relationships for CTI (Class Table Inheritance)
+    ebook_details = db.relationship('Ebook', back_populates='product', uselist=False, cascade='all, delete-orphan')
+    database_details = db.relationship('Database', back_populates='product', uselist=False, cascade='all, delete-orphan')
 
 class Subscription(db.Model):
     __tablename__ = 'subscriptions'
@@ -225,32 +233,38 @@ class Subscription(db.Model):
 class Ebook(db.Model):
     __tablename__ = 'ebooks'
     
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
+    # product_id is now the primary key and foreign key to Product table
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id', ondelete='CASCADE'), primary_key=True)
+    # title can be removed if Product.name is used as the primary title/name
+    # title = db.Column(db.String(200), nullable=False)
     author = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)
-    price = db.Column(db.Float, nullable=False)
     category = db.Column(db.String(50))
-    file_path = db.Column(db.String(200), nullable=False)
-    cover_path = db.Column(db.String(200))
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    file_path = db.Column(db.String(200), nullable=False) # Path to the ebook file
+    cover_path = db.Column(db.String(200)) # Path to the cover image
+
+    # Relationship back to the Product base table
+    product = db.relationship('Product', back_populates='ebook_details')
     
     def __repr__(self):
-        return f'<Ebook {self.title}>'
+        # Access name through the product relationship if Ebook.title is removed
+        return f'<EbookDetails for Product ID: {self.product_id}>'
 
 class Database(db.Model):
     __tablename__ = 'databases'
     
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text)
-    price = db.Column(db.Float, nullable=False)
-    type = db.Column(db.String(50))
-    size = db.Column(db.String(50))
-    file_path = db.Column(db.String(200), nullable=False)
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    # product_id is now the primary key and foreign key to Product table
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id', ondelete='CASCADE'), primary_key=True)
+    # name can be removed if Product.name is used as the primary name
+    # name = db.Column(db.String(200), nullable=False)
+    # 'type' here refers to database technology (e.g., PostgreSQL, MongoDB)
+    # Renaming to avoid confusion with Product.type
+    db_technology_type = db.Column(db.String(50))
+    size = db.Column(db.String(50)) # E.g., "100MB", "2GB"
+    file_path = db.Column(db.String(200), nullable=False) # Path to the database file/dump
+
+    # Relationship back to the Product base table
+    product = db.relationship('Product', back_populates='database_details')
     
     def __repr__(self):
-        return f'<Database {self.name}>'
+        # Access name through the product relationship if Database.name is removed
+        return f'<DatabaseDetails for Product ID: {self.product_id}>'

@@ -132,20 +132,21 @@ def service_description():
 @bp.route('/scripts')
 def scripts():
     try:
-        scripts = Product.query.filter_by(type='script', is_active=True).all()
-        return render_template('scripts.html', scripts=scripts)
+        # Renamed 'scripts' to 'script_products' for clarity as items are Product objects
+        script_products = Product.query.filter_by(type=ProductType.SCRIPT, is_active=True).all()
+        return render_template('scripts.html', scripts=script_products, ProductType=ProductType)
     except Exception as e:
-        current_app.logger.error(f"خطأ في صفحة السكربتات: {str(e)}")
+        current_app.logger.error(f"Error in /scripts route: {str(e)}")
         flash("حدث خطأ أثناء تحميل السكربتات", "danger")
         return redirect(url_for('main.products'))
 
 @bp.route('/products')
 def products():
     try:
-        products = Product.query.filter_by(is_active=True).all()
-        return render_template('products.html', products=products)
+        all_products = Product.query.filter_by(is_active=True).all()
+        return render_template('products.html', products=all_products, ProductType=ProductType)
     except Exception as e:
-        current_app.logger.error(f"خطأ في صفحة المنتجات: {str(e)}")
+        current_app.logger.error(f"Error in /products route: {str(e)}")
         flash("حدث خطأ أثناء تحميل المنتجات", "danger")
         return redirect(url_for('main.homepage'))
 
@@ -422,27 +423,39 @@ def super_admin_dashboard():
     try:
         admins = User.query.filter_by(role=Role.ADMIN).all()
         users = User.query.filter_by(role=Role.USER).all()
-        scripts = Product.query.filter_by(type='script').all()
-        ebooks = Product.query.filter_by(type='ebook').all()
-        databases = Product.query.filter_by(type='database').all()
+
+        # Fetch all products, details will be accessed via relationships in the template
+        all_products = Product.query.all()
+
+        # For stats, we still need to query by type
+        active_scripts_count = Product.query.filter_by(type=ProductType.SCRIPT, is_active=True).count()
+        total_scripts_count = Product.query.filter_by(type=ProductType.SCRIPT).count()
+
+        # The template will iterate all_products and use product.type
+        # to differentiate and access product.script_definition,
+        # product.ebook_details, or product.database_details
+
         permissions = Permission.get_all_permissions()
         stats = {
             'admins_count': len(admins),
             'users_count': len(users),
-            'active_scripts': Product.query.filter_by(type='script', is_active=True).count(),
-            'total_scripts': Product.query.filter_by(type='script').count(),
+            'active_scripts': active_scripts_count,
+            'total_scripts': total_scripts_count,
+            # Add counts for other product types if needed for stats
+            'total_ebooks': Product.query.filter_by(type=ProductType.EBOOK).count(),
+            'total_databases': Product.query.filter_by(type=ProductType.DATABASE).count(),
         }
         return render_template(
             'super_admin_dashboard.html',
             admins=admins,
             users=users,
-            scripts=scripts,
-            ebooks=ebooks,
-            databases=databases,
+            all_products=all_products, # Pass all products
             permissions=permissions,
-            stats=stats
+            stats=stats,
+            ProductType=ProductType # Pass ProductType class for template usage
         )
     except Exception as e:
+        current_app.logger.error(f"Error in super_admin_dashboard: {str(e)}")
         flash("حدث خطأ أثناء تحميل لوحة التحكم", "danger")
         return redirect(url_for('main.homepage'))
 
@@ -450,20 +463,33 @@ def super_admin_dashboard():
 @admin_required
 def admin_dashboard():
     try:
-        if not current_user.is_authenticated:
-            return redirect(url_for('main.admin_login'))
-            
+        # The @admin_required decorator (now updated) handles:
+        # 1. Authentication check (redirects to admin_login if not authenticated)
+        # 2. Role check (allows admin or super_admin)
+        #    - If a super_admin accesses this, they are allowed by the decorator.
+        #      It's conventional for super_admins to see admin dashboards.
+        #      If specific redirection for super_admins away from this page is still desired,
+        #      an explicit check can be maintained:
         if current_user.is_super_admin:
             return redirect(url_for('main.super_admin_dashboard'))
             
-        if not current_user.is_admin:
-            flash("غير مصرح لك بالدخول هنا.", "danger")
-            return redirect(url_for('main.homepage'))
-            
-        # ... rest of the code ...
+        # Fetch data for admin dashboard
+        users = User.query.filter_by(role=Role.USER).all()
+        all_products = Product.query.all() # Fetch all products
+
+        # The template will iterate all_products and use product.type
+        # to differentiate and access product.script_definition,
+        # product.ebook_details, or product.database_details
+
+        return render_template(
+            'admin_dashboard.html',
+            users=users,
+            all_products=all_products, # Pass all products
+            ProductType=ProductType # Pass ProductType class for template usage
+        )
         
     except Exception as e:
-        current_app.logger.error(f"خطأ في لوحة التحكم: {str(e)}")
+        current_app.logger.error(f"Error in admin_dashboard: {str(e)}")
         flash("حدث خطأ أثناء تحميل لوحة التحكم", "danger")
         return redirect(url_for('main.homepage'))
 

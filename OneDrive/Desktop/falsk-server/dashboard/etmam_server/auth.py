@@ -38,10 +38,17 @@ def admin_required(f):
             flash("يجب تسجيل الدخول أولاً.", "danger")
             return redirect(url_for('main.admin_login'))
             
-        if not current_user.is_admin:
-            flash("غير مصرح لك بالدخول هنا.", "danger")
-            dashboard = check_role_and_redirect()
-            return redirect(url_for(dashboard)) if dashboard else redirect(url_for('main.homepage'))
+        if not (current_user.is_admin or current_user.is_super_admin): # Allow super_admins
+            flash("غير مصرح لك بالدخول هنا. يتطلب دور مشرف أو سوبر أدمن.", "danger")
+            # If the user is some other authenticated user (e.g., client), redirect to their dashboard
+            # If unauthenticated, they'd be caught by the is_authenticated check earlier.
+            # However, the is_authenticated check already redirects to admin_login for unauthenticated.
+            # So, this path is for authenticated non-admins/non-super_admins.
+            if current_user.is_authenticated and not (current_user.is_admin or current_user.is_super_admin):
+                 dashboard_url = check_role_and_redirect()
+                 return redirect(url_for(dashboard_url if dashboard_url else 'main.homepage'))
+            # Default fallback if other conditions aren't met, though is_authenticated should handle it.
+            return redirect(url_for('main.homepage'))
             
         return f(*args, **kwargs)
     return decorated_function
