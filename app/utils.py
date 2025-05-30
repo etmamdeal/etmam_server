@@ -42,7 +42,7 @@ def allowed_file(filename, type_key):
     Checks if a filename has an allowed extension for a given type.
     Args:
         filename (str): The name of the file.
-        type_key (str): The key corresponding to the upload type in 
+        type_key (str): The key corresponding to the upload type in
                         current_app.config['ALLOWED_EXTENSIONS_BY_TYPE'].
     Returns:
         bool: True if the file is allowed, False otherwise.
@@ -66,9 +66,9 @@ def get_secure_path(filename, type_key, base_folder=None):
     '''
     if not allowed_file(filename, type_key):
         return None
-    
+
     s_filename = secure_filename(filename)
-    
+
     if base_folder is None:
         base_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads') # 'app/uploads'
 
@@ -104,12 +104,12 @@ def validate_script_content(content):
         'import os', 'import subprocess', '__import__',
         'open(', 'file.', 'socket.', 'sys.'
     ]
-    
+
     content_lower = content.lower()
     for word in forbidden_words:
         if word.lower() in content_lower:
             return False, f"الكلمة المحظورة: {word}"
-    
+
     return True, "السكربت آمن"
 
 def send_email_direct(subject, body, to_email):
@@ -123,7 +123,7 @@ def send_email_direct(subject, body, to_email):
 
         # Ensure MAIL_PORT is an integer
         mail_port = int(current_app.config.get('MAIL_PORT', 587)) # Default to 587 if not set
-        
+
         # Determine SMTP class based on whether TLS or SSL is preferred.
         if current_app.config.get('MAIL_USE_TLS'): # Assuming this implies SSL for port 465 or STARTTLS for 587
             if mail_port == 465: # Typically SSL
@@ -139,7 +139,7 @@ def send_email_direct(subject, body, to_email):
             with smtplib.SMTP(current_app.config['MAIL_SERVER'], mail_port) as server:
                 server.login(current_app.config['MAIL_USERNAME'], current_app.config['MAIL_PASSWORD'])
                 server.send_message(msg)
-        
+
         current_app.logger.info(f"Email (direct) sent successfully to {to_email} with subject: {subject}")
         return True
     except Exception as e:

@@ -78,7 +78,7 @@ def check_permission(permission):
                 
             return f(*args, **kwargs)
         return decorated_function
-    return decorator 
+    return decorator
 
 # Moved from app.py and renamed for clarity
 def require_admin_with_permission(permission):
@@ -88,7 +88,7 @@ def require_admin_with_permission(permission):
             if not current_user.is_authenticated:
                 flash("يجب تسجيل الدخول أولاً.", "danger")
                 return redirect(url_for('main.admin_login'))
-                
+
             if current_user.is_super_admin:
                 # Super admin might be accessing a regular admin page,
                 # redirect them to super admin dashboard if the endpoint implies it's an admin area.
@@ -104,8 +104,8 @@ def require_admin_with_permission(permission):
             else: # Not super_admin and not admin
                 flash("غير مصرح لك بالدخول هنا.", "danger")
                 # Redirect to homepage or client login, as admin_login might not be appropriate
-                return redirect(url_for('main.homepage')) 
-                
+                return redirect(url_for('main.homepage'))
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator

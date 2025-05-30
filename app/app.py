@@ -100,7 +100,7 @@ def load_user(user_id):
 
 # استيراد دوال المصادقة
 # check_admin_permission was moved to auth.py
-from auth import super_admin_required, admin_required, client_required, check_permission, check_role_and_redirect 
+from auth import super_admin_required, admin_required, client_required, check_permission, check_role_and_redirect
 
 # send_email was moved to utils.py and renamed send_email_direct
 
@@ -111,7 +111,7 @@ def homepage():
         return render_template('index.html', now=datetime.now())
     except Exception as e:
         current_app.logger.exception(f'An error occurred in the homepage: {str(e)}')
-        abort(500) 
+        abort(500)
 
 @bp.route('/service-description')
 def service_description():

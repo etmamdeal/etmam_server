@@ -82,9 +82,9 @@ class Config:
     # IMPORTANT: UPLOAD_FOLDER (e.g., 'app/uploads/') must NOT be publicly served by the webserver.
     # Files should be served via a controlled endpoint that checks permissions.
     UPLOAD_FOLDER = 'uploads' # Relative to app instance path, so 'app/uploads/'
-    
+
     # Define allowed extensions by type of upload for more granular control.
-    # IMPORTANT: 
+    # IMPORTANT:
     # 1. Always use werkzeug.utils.secure_filename() on any user-provided filename before saving.
     # 2. Validate MIME types in addition to extensions in your upload handling logic.
     # 3. For sensitive files like executable scripts ('scripts'), ensure they are stored securely,
