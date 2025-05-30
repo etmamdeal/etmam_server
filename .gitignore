@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Build artifacts
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+
+# Lock files
+Pipfile.lock
+poetry.lock
+
+# IDEs
+.idea/
+.vscode/
+*.project
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Databases
+*.db
+*.sqlite3
+
+# Project-specific (generic)
+instance/
+uploads/
+logs/
+.env
+
+# Project-specific (app structure)
+app/.env
+app/database.db
+app/database.db.backup
+app/instance/
+# If 'app/uploads/' and 'app/logs/' are distinct from root 'uploads/' and 'logs/'
+# and need to be ignored from within 'app/', they can be added as:
+# app/uploads/
+# app/logs/
+# However, the generic 'uploads/' and 'logs/' at the root level might cover these
+# if they are symlinked or if the intention is to ignore any such named folders.
+# For now, I'll stick to the provided list which has specific app/ paths.
+# The prompt listed:
+# app/uploads/
+# app/logs/
+# So I will ensure these are present.
+app/uploads/
+app/logs/

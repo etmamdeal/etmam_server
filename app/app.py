@@ -13,11 +13,10 @@ import io
 import contextlib
 import json
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+# smtplib, MIMEText, MIMEMultipart removed as send_email moved to utils
 from werkzeug.utils import secure_filename
 from functools import wraps
+from .utils import send_email_direct # Added for relocated email function
 
 # تحميل متغيرات البيئة من ملف .env
 load_dotenv()
@@ -31,6 +30,41 @@ from models import db, User, Script, UserScript, RunLog, Role, Permission, Produ
 # تهيئة نظام تسجيل الدخول
 login_manager = LoginManager()
 login_manager.login_view = 'main.client_login'
+
+# Custom Error Handlers
+@bp.app_errorhandler(400)
+def handle_400(e):
+    current_app.logger.warning(f"Bad Request (400): {e.description if hasattr(e, 'description') else 'No description'}")
+    return render_template('errors/generic_error.html', error=e), 400
+
+@bp.app_errorhandler(401)
+def handle_401(e):
+    current_app.logger.warning(f"Unauthorized (401): {e.description if hasattr(e, 'description') else 'No description'}")
+    flash("الرجاء تسجيل الدخول للوصول لهذه الصفحة.", "warning")
+    return redirect(url_for('main.client_login'))
+
+@bp.app_errorhandler(403)
+def handle_403(e):
+    current_app.logger.warning(f"Forbidden (403): {e.description if hasattr(e, 'description') else 'No description'}")
+    # Assuming errors/403.html exists or will be created.
+    # For now, to ensure this runs, let's use generic_error.html if 403.html is not confirmed.
+    # The prompt implies errors/403.html, errors/404.html, errors/500.html exist from a previous step.
+    # I will assume they exist.
+    return render_template('errors/403.html', error=e), 403
+
+@bp.app_errorhandler(404)
+def handle_404(e):
+    current_app.logger.info(f"Not Found (404): {request.path} - {e.description if hasattr(e, 'description') else 'No description'}")
+    return render_template('errors/404.html', error=e), 404
+
+@bp.app_errorhandler(500)
+def handle_500(e):
+    original_exception = getattr(e, "original_exception", None)
+    if original_exception:
+        current_app.logger.exception(f"Internal Server Error (500): {e.description if hasattr(e, 'description') else 'No description'}")
+    else:
+        current_app.logger.error(f"Internal Server Error (500): {e.description if hasattr(e, 'description') else 'No description'}")
+    return render_template('errors/500.html', error=e), 500
 
 def create_super_admin():
     """إنشاء حساب السوبر أدمن إذا لم يكن موجوداً"""
@@ -65,56 +99,10 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # استيراد دوال المصادقة
-from auth import super_admin_required, admin_required, client_required, check_permission, check_role_and_redirect
+# check_admin_permission was moved to auth.py
+from auth import super_admin_required, admin_required, client_required, check_permission, check_role_and_redirect 
 
-# إعدادات البريد الإلكتروني من متغيرات البيئة
-SMTP_SERVER = 'smtppro.zoho.sa'
-SMTP_PORT = 465
-SMTP_USERNAME = 'ai_agents@etmamdeal.com'
-SMTP_PASSWORD = 'TKxLhzQ2zRtp'
-ADMIN_EMAIL = 'ai_agents@etmamdeal.com'
-
-# تحسين التحقق من الصلاحيات
-def check_admin_permission(permission):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated:
-                flash("يجب تسجيل الدخول أولاً.", "danger")
-                return redirect(url_for('main.admin_login'))
-                
-            if current_user.is_super_admin:
-                if request.endpoint.startswith('admin_'):
-                    return redirect(url_for('main.super_admin_dashboard'))
-            elif current_user.is_admin:
-                if not current_user.has_permission(permission):
-                    flash("ليس لديك الصلاحية الكافية.", "danger")
-                    return redirect(url_for('main.admin_dashboard'))
-            else:
-                flash("غير مصرح لك بالدخول هنا.", "danger")
-                return redirect(url_for('main.homepage'))
-                
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-def send_email(subject, body, to_email):
-    try:
-        msg = MIMEText(body, 'plain', 'utf-8')
-        msg['Subject'] = subject
-        msg['From'] = SMTP_USERNAME
-        msg['To'] = to_email
-
-        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(msg)
-            print("✅ تم الإرسال بنجاح")
-            return True
-    except Exception as e:
-        error_msg = f"❌ فشل الإرسال: {str(e)}"
-        print(error_msg)
-        current_app.logger.error(error_msg)
-        return False
+# send_email was moved to utils.py and renamed send_email_direct
 
 # المسارات
 @bp.route('/')
@@ -122,8 +110,8 @@ def homepage():
     try:
         return render_template('index.html', now=datetime.now())
     except Exception as e:
-        current_app.logger.error(f'خطأ في الصفحة الرئيسية: {str(e)}')
-        return f'<h1>خطأ في عرض الصفحة</h1><pre>{str(e)}</pre>', 500
+        current_app.logger.exception(f'An error occurred in the homepage: {str(e)}')
+        abort(500) 
 
 @bp.route('/service-description')
 def service_description():
@@ -135,7 +123,7 @@ def scripts():
         scripts = Product.query.filter_by(type='script', is_active=True).all()
         return render_template('scripts.html', scripts=scripts)
     except Exception as e:
-        current_app.logger.error(f"خطأ في صفحة السكربتات: {str(e)}")
+        current_app.logger.exception(f"Error in route {request.path}: {str(e)}")
         flash("حدث خطأ أثناء تحميل السكربتات", "danger")
         return redirect(url_for('main.products'))
 
@@ -145,7 +133,7 @@ def products():
         products = Product.query.filter_by(is_active=True).all()
         return render_template('products.html', products=products)
     except Exception as e:
-        current_app.logger.error(f"خطأ في صفحة المنتجات: {str(e)}")
+        current_app.logger.exception(f"Error in route {request.path}: {str(e)}")
         flash("حدث خطأ أثناء تحميل المنتجات", "danger")
         return redirect(url_for('main.homepage'))
 
@@ -227,7 +215,7 @@ def register():
 
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"خطأ في عملية التسجيل: {str(e)}")
+            current_app.logger.exception(f"Error in route {request.path}: {str(e)}")
             flash("حدث خطأ أثناء التسجيل. الرجاء المحاولة مرة أخرى.", "danger")
             return redirect(url_for('main.register'))
 
@@ -265,7 +253,7 @@ def client_login():
             return redirect(url_for('main.client_dashboard'))
             
         except Exception as e:
-            current_app.logger.error(f"خطأ في تسجيل دخول العميل: {str(e)}")
+            current_app.logger.exception(f"Error in route {request.path}: {str(e)}")
             flash("حدث خطأ أثناء تسجيل الدخول. الرجاء المحاولة مرة أخرى.", "danger")
             return redirect(url_for('main.client_login'))
             
@@ -322,7 +310,7 @@ def admin_login():
                 return redirect(url_for('main.admin_dashboard'))
             
         except Exception as e:
-            current_app.logger.error(f"خطأ في تسجيل دخول المشرف: {str(e)}")
+            current_app.logger.exception(f"Error in route {request.path}: {str(e)}")
             flash("حدث خطأ أثناء تسجيل الدخول. الرجاء المحاولة مرة أخرى.", "danger")
             return redirect(url_for('main.admin_login'))
             
@@ -358,13 +346,13 @@ def reset_password_request():
         فريق إتمام
         """
         
-        if send_email(subject, body, user.email):
+        if send_email_direct(subject, body, user.email): # Updated to send_email_direct
             flash("تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.", "success")
         else:
             flash("حدث خطأ أثناء إرسال البريد الإلكتروني. الرجاء المحاولة مرة أخرى.", "danger")
             
     except Exception as e:
-        current_app.logger.error(f"خطأ في طلب إعادة تعيين كلمة المرور: {str(e)}")
+        current_app.logger.exception(f"Error in route {request.path}: {str(e)}")
         flash("حدث خطأ أثناء معالجة الطلب. الرجاء المحاولة مرة أخرى.", "danger")
         
     return redirect(url_for('main.admin_login'))
@@ -410,7 +398,7 @@ def admin_register():
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"خطأ في تسجيل المشرف: {str(e)}")
+        current_app.logger.exception(f"Error in route {request.path}: {str(e)}")
         flash("حدث خطأ أثناء إنشاء الحساب. الرجاء المحاولة مرة أخرى.", "danger")
         
     return redirect(url_for('main.admin_login'))
@@ -443,6 +431,7 @@ def super_admin_dashboard():
             stats=stats
         )
     except Exception as e:
+        current_app.logger.exception(f"Error in route {request.path}: {str(e)}")
         flash("حدث خطأ أثناء تحميل لوحة التحكم", "danger")
         return redirect(url_for('main.homepage'))
 
@@ -463,7 +452,7 @@ def admin_dashboard():
         # ... rest of the code ...
         
     except Exception as e:
-        current_app.logger.error(f"خطأ في لوحة التحكم: {str(e)}")
+        current_app.logger.exception(f"Error in route {request.path}: {str(e)}")
         flash("حدث خطأ أثناء تحميل لوحة التحكم", "danger")
         return redirect(url_for('main.homepage'))
 
@@ -494,7 +483,7 @@ def manage_user_action(user_id, action):
         return redirect(url_for('main.manage_users'))
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"خطأ في تحديث حالة المستخدم: {str(e)}")
+        current_app.logger.exception(f"Error in route {request.path}: {str(e)}")
         flash("حدث خطأ أثناء تحديث حالة المستخدم", "danger")
         return redirect(url_for('main.manage_users'))
 

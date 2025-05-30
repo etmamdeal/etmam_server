@@ -1,3 +1,6 @@
+import logging
+from logging.handlers import RotatingFileHandler
+
 """
 ملف التكوين الرئيسي للتطبيق
 ---------------------------
@@ -14,8 +17,9 @@ from datetime import timedelta
 
 class Config:
     # إعدادات Celery
-    CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL') or 'redis://localhost:6379/0'
-    CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND') or 'redis://localhost:6379/0'
+    # IMPORTANT: For production, set CELERY_BROKER_URL and CELERY_RESULT_BACKEND via environment variables.
+    CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL') or 'redis://localhost:6379/0' # Default for dev
+    CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND') or 'redis://localhost:6379/0' # Default for dev
     CELERY_TASK_SERIALIZER = 'json'
     CELERY_RESULT_SERIALIZER = 'json'
     CELERY_ACCEPT_CONTENT = ['json']
@@ -23,7 +27,9 @@ class Config:
     CELERY_ENABLE_UTC = True
     
     # إعدادات أساسية
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'مفتاح-سري-افتراضي-للتطوير'
+    # IMPORTANT: SECRET_KEY must be set in the environment for production to ensure security.
+    # Generate a strong, unique key and set it as an environment variable.
+    SECRET_KEY = os.environ.get('SECRET_KEY')
     FLASK_APP = 'app.py'
     
     # إعدادات قاعدة البيانات
@@ -61,17 +67,35 @@ class Config:
     
     # إعدادات التخزين المؤقت
     CACHE_TYPE = 'redis'
-    CACHE_REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
+    # IMPORTANT: For production, set REDIS_URL via environment variable.
+    CACHE_REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0' # Default for dev
     CACHE_DEFAULT_TIMEOUT = 300
     
     # إعدادات الأمان
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = 3600
-    SECURITY_PASSWORD_SALT = os.environ.get('SECURITY_PASSWORD_SALT') or 'ملح-افتراضي-للتطوير'
+    # IMPORTANT: SECURITY_PASSWORD_SALT must be set in the environment for production.
+    # Generate a strong, unique salt and set it as an environment variable.
+    SECURITY_PASSWORD_SALT = os.environ.get('SECURITY_PASSWORD_SALT')
     
     # إعدادات تحميل الملفات
-    UPLOAD_FOLDER = 'uploads'
-    ALLOWED_EXTENSIONS = {'py', 'txt', 'json', 'yaml', 'yml'}
+    # IMPORTANT: UPLOAD_FOLDER (e.g., 'app/uploads/') must NOT be publicly served by the webserver.
+    # Files should be served via a controlled endpoint that checks permissions.
+    UPLOAD_FOLDER = 'uploads' # Relative to app instance path, so 'app/uploads/'
+    
+    # Define allowed extensions by type of upload for more granular control.
+    # IMPORTANT: 
+    # 1. Always use werkzeug.utils.secure_filename() on any user-provided filename before saving.
+    # 2. Validate MIME types in addition to extensions in your upload handling logic.
+    # 3. For sensitive files like executable scripts ('scripts'), ensure they are stored securely,
+    #    with appropriate permissions, and ideally not directly executable from their stored location.
+    #    Consider storing them outside the web root or in a database if appropriate.
+    ALLOWED_EXTENSIONS_BY_TYPE = {
+        'scripts': {'py', 'sh', 'js'},  # Example: Python, shell scripts, JavaScript
+        'ebooks': {'pdf', 'epub', 'mobi'},       # Example: PDF, ePub, Mobi
+        'databases': {'db', 'sqlite', 'sqlite3', 'csv', 'json', 'sql'}, # Example
+        'general_text': {'txt', 'json', 'yaml', 'yml', 'md'} # For general text files, markdown
+    }
     
     # إعدادات التحسين
     OPTIMIZE_DB_QUERIES = True
@@ -93,23 +117,26 @@ class Config:
             
         # إعداد التسجيل
         if not app.debug and not app.testing:
+            log_level = getattr(logging, app.config['LOG_LEVEL'].upper(), logging.INFO)
+
             if app.config['LOG_TO_STDOUT']:
                 stream_handler = logging.StreamHandler()
-                stream_handler.setLevel(logging.INFO)
+                stream_handler.setLevel(log_level)
+                stream_handler.setFormatter(logging.Formatter(app.config['LOG_FORMAT']))
                 app.logger.addHandler(stream_handler)
             else:
-                if not os.path.exists('logs'):
+                if not os.path.exists('logs'): # This will be app/logs
                     os.mkdir('logs')
                 file_handler = RotatingFileHandler(
-                    app.config['LOG_FILE'],
+                    app.config['LOG_FILE'], # This will be app/logs/etmam.log
                     maxBytes=app.config['LOG_MAX_SIZE'],
                     backupCount=app.config['LOG_BACKUP_COUNT']
                 )
                 file_handler.setFormatter(logging.Formatter(app.config['LOG_FORMAT']))
-                file_handler.setLevel(logging.INFO)
+                file_handler.setLevel(log_level)
                 app.logger.addHandler(file_handler)
                 
-            app.logger.setLevel(logging.INFO)
+            app.logger.setLevel(log_level)
             app.logger.info('بدء تشغيل نظام إتمام')
 
 class DevelopmentConfig(Config):
@@ -123,6 +150,8 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     SQLALCHEMY_ECHO = False
+    LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT', 'True') # Default to True for prod if not set
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO') # Default to INFO for prod if not set
     
     # تحسينات الأمان
     SESSION_COOKIE_SECURE = True
