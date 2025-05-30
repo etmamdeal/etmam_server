@@ -5,9 +5,10 @@
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from models import db, User, Script, UserScript, RunLog, Role, Permission
+from models import db, User, Script, UserScript, RunLog, Role, Permission # db is imported here
 from celery_app import make_celery
-from app import bp, login_manager
+from app import bp, login_manager # app blueprint
+from extensions import migrate # Import migrate from extensions
 from werkzeug.security import generate_password_hash
 
 def create_app():
@@ -17,6 +18,7 @@ def create_app():
     # تهيئة الإضافات
     db.init_app(app)
     login_manager.init_app(app)
+    migrate.init_app(app, db) # Initialize Flask-Migrate
     
     # تسجيل Blueprint
     app.register_blueprint(bp)

@@ -54,13 +54,13 @@ class Script(db.Model):
     __tablename__ = 'scripts'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(100), nullable=False, index=True)
     description = db.Column(db.Text)
     file_path = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     parameters = db.Column(db.JSON)  # لتخزين معلومات المتغيرات المطلوبة
-    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     
     # العلاقات
     users = db.relationship('UserScript', back_populates='script')
@@ -85,12 +85,12 @@ class UserScript(db.Model):
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     password = db.Column(db.String(200), nullable=False)
     full_name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     phone = db.Column(db.String(20))
-    role = db.Column(db.String(20), default=Role.USER)
+    role = db.Column(db.String(20), default=Role.USER, index=True)
     permissions = db.Column(db.Text, default='[]')  # JSON string of permissions
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -136,9 +136,9 @@ class User(UserMixin, db.Model):
 
 class RunLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    script_id = db.Column(db.Integer, db.ForeignKey('scripts.id', name='fk_runlog_script'), nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', name='fk_runlog_user'), nullable=False)
-    user_script_id = db.Column(db.Integer, db.ForeignKey('user_script.user_id', name='fk_runlog_user_script'), nullable=True)
+    script_id = db.Column(db.Integer, db.ForeignKey('scripts.id', name='fk_runlog_script'), nullable=True) # Assuming scripts can be run without being 'assigned' via UserScript
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', name='fk_runlog_user', ondelete='CASCADE'), nullable=False) # If user is deleted, their logs might be deleted too. Or SET NULL if logs are kept.
+    # user_script_id removed as per subtask instructions
     status = db.Column(db.String(20), nullable=False)  # success, error
     output = db.Column(db.Text)
     error = db.Column(db.Text)
@@ -147,7 +147,7 @@ class RunLog(db.Model):
     # العلاقات
     user = db.relationship('User', backref='run_logs')
     script = db.relationship('Script', backref='run_logs')
-    user_script = db.relationship('UserScript', backref='run_logs', primaryjoin="and_(RunLog.user_script_id==UserScript.user_id, RunLog.script_id==UserScript.script_id)")
+    # user_script relationship removed
 
 class ProductType:
     SCRIPT = 'script'
@@ -179,19 +179,19 @@ class SubscriptionPeriod:
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
+    name = db.Column(db.String(100), unique=True, nullable=False, index=True)
     description = db.Column(db.Text, nullable=False)
-    type = db.Column(db.String(20), nullable=False)  # script, ebook, database
+    type = db.Column(db.String(20), nullable=False, index=True)  # script, ebook, database
     price = db.Column(db.Float, nullable=False)
     image_url = db.Column(db.String(200))
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
-    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     last_modified = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
-    last_modified_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    last_modified_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     
     # للسكربتات فقط
-    script_id = db.Column(db.Integer, db.ForeignKey('scripts.id'), nullable=True)
+    script_id = db.Column(db.Integer, db.ForeignKey('scripts.id', ondelete='SET NULL'), nullable=True) # If script is deleted, product's script_id becomes NULL
     
     # العلاقات
     creator = db.relationship('User', foreign_keys=[created_by], backref='products_created')
@@ -202,8 +202,8 @@ class Product(db.Model):
 class Subscription(db.Model):
     __tablename__ = 'subscriptions'
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     period_months = db.Column(db.Integer, nullable=False)  # 1, 3, 6, 12
     start_date = db.Column(db.DateTime, nullable=False, default=datetime.now)
     end_date = db.Column(db.DateTime, nullable=False)

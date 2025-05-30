@@ -80,32 +80,7 @@ def check_permission(permission):
         return decorated_function
     return decorator
 
-# Moved from app.py and renamed for clarity
-def require_admin_with_permission(permission):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated:
-                flash("يجب تسجيل الدخول أولاً.", "danger")
-                return redirect(url_for('main.admin_login'))
-
-            if current_user.is_super_admin:
-                # Super admin might be accessing a regular admin page,
-                # redirect them to super admin dashboard if the endpoint implies it's an admin area.
-                if request.endpoint.startswith('admin_') and not request.endpoint.startswith('admin_super_'): # Avoid redirect loops if on super admin
-                    # This logic might need refinement based on actual admin view function names
-                    # to prevent unwanted redirects from super_admin_dashboard itself if it's also 'admin_...'
-                    pass # Super admin has all permissions, so proceed. Or redirect if it's not a super_admin page.
-                     # For now, let's assume super_admin can access all admin pages.
-            elif current_user.is_admin:
-                if not current_user.has_permission(permission):
-                    flash("ليس لديك الصلاحية الكافية.", "danger")
-                    return redirect(url_for('main.admin_dashboard')) # Redirect to their own dashboard
-            else: # Not super_admin and not admin
-                flash("غير مصرح لك بالدخول هنا.", "danger")
-                # Redirect to homepage or client login, as admin_login might not be appropriate
-                return redirect(url_for('main.homepage'))
-
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
+# The require_admin_with_permission decorator (previously check_admin_permission)
+# has been removed as it was found to be unused in app/app.py.
+# The combination of @admin_required and @check_permission(Permission.NAME)
+# is used instead for routes requiring admin role and specific permissions.

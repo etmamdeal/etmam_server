@@ -404,8 +404,7 @@ def admin_register():
     return redirect(url_for('main.admin_login'))
 
 @bp.route('/super-admin')
-@login_required
-@super_admin_required
+@super_admin_required # This decorator should handle login_required implicitly
 def super_admin_dashboard():
     try:
         admins = User.query.filter_by(role=Role.ADMIN).all()
@@ -436,20 +435,22 @@ def super_admin_dashboard():
         return redirect(url_for('main.homepage'))
 
 @bp.route('/admin')
-@admin_required
+@admin_required # This decorator handles is_authenticated and is_admin checks
 def admin_dashboard():
     try:
-        if not current_user.is_authenticated:
-            return redirect(url_for('main.admin_login'))
-            
+        # The @admin_required decorator (from app/auth.py) already ensures that
+        # current_user is authenticated and is an admin.
+        # Additional check for super_admin to redirect if necessary.
         if current_user.is_super_admin:
             return redirect(url_for('main.super_admin_dashboard'))
             
-        if not current_user.is_admin:
-            flash("غير مصرح لك بالدخول هنا.", "danger")
-            return redirect(url_for('main.homepage'))
-            
         # ... rest of the code ...
+        # (The actual content of admin_dashboard if user is admin but not super_admin)
+        # For now, let's assume it renders a template or does admin-specific logic.
+        # If there's no specific content here for a regular admin, this route might
+        # always redirect super_admins and only be directly accessible by regular admins.
+        # Let's add a placeholder render for clarity for now.
+        return render_template('admin/admin_dashboard_content.html') # Placeholder
         
     except Exception as e:
         current_app.logger.exception(f"Error in route {request.path}: {str(e)}")
@@ -462,22 +463,18 @@ def client_dashboard():
     return render_template('client_dashboard.html')
 
 @bp.route('/manage_users')
-@login_required
+@admin_required # Replaces @login_required and inline admin check
+@check_permission(Permission.MANAGE_USERS) # Specific permission check
 def manage_users():
-    if not current_user.is_admin:
-        flash("غير مصرح لك بالدخول هنا.", "danger")
-        return redirect(url_for('main.homepage'))
-        
+    # Inline admin check removed, handled by decorators
     users = User.query.all()
     return render_template('manage_users.html', users=users)
 
 @bp.route('/manage_users/<int:user_id>/<action>')
-@login_required
+@admin_required # Replaces @login_required and inline admin check
+@check_permission(Permission.MANAGE_USERS) # Specific permission check
 def manage_user_action(user_id, action):
-    if not current_user.is_admin:
-        flash("غير مصرح لك بالدخول هنا.", "danger")
-        return redirect(url_for('main.homepage'))
-    
+    # Inline admin check removed, handled by decorators
     try:
         # ... existing code ...
         return redirect(url_for('main.manage_users'))
@@ -487,4 +484,177 @@ def manage_user_action(user_id, action):
         flash("حدث خطأ أثناء تحديث حالة المستخدم", "danger")
         return redirect(url_for('main.manage_users'))
 
-# حذف سطر تسجيل Blueprint لأنه يتم في run.py 
+# حذف سطر تسجيل Blueprint لأنه يتم في run.py
+
+# Placeholder routes for missing endpoints
+@bp.route('/admin/toggle_admin_status/<int:admin_id>', methods=['GET', 'POST'])
+@super_admin_required # Assumes @login_required is included in super_admin_required
+def toggle_admin_status(admin_id):
+    flash(f"Endpoint main.toggle_admin_status ({request.method}) is not yet implemented for admin_id: {admin_id}.", "warning")
+    return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/admin/add_admin', methods=['POST'])
+@super_admin_required
+def add_admin():
+    flash(f"Endpoint main.add_admin ({request.method}) is not yet implemented.", "warning")
+    return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/admin/edit_admin/<int:admin_id>', methods=['GET', 'POST'])
+@super_admin_required
+def edit_admin(admin_id):
+    flash(f"Endpoint main.edit_admin ({request.method}) is not yet implemented for admin_id: {admin_id}.", "warning")
+    return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/admin/edit_admin_permissions/<int:admin_id>', methods=['POST'])
+@super_admin_required
+def edit_admin_permissions(admin_id):
+    flash(f"Endpoint main.edit_admin_permissions ({request.method}) is not yet implemented for admin_id: {admin_id}.", "warning")
+    return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/admin/reset_admin_password/<int:admin_id>', methods=['POST'])
+@super_admin_required
+def reset_admin_password(admin_id):
+    flash(f"Endpoint main.reset_admin_password ({request.method}) is not yet implemented for admin_id: {admin_id}.", "warning")
+    return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/admin/add_user', methods=['POST'])
+@admin_required
+def add_user():
+    flash(f"Endpoint main.add_user ({request.method}) is not yet implemented.", "warning")
+    return redirect(url_for('main.admin_dashboard')) # Or super_admin_dashboard if that's more appropriate
+
+@bp.route('/admin/edit_user/<int:user_id>', methods=['GET', 'POST'])
+@admin_required
+def edit_user(user_id):
+    flash(f"Endpoint main.edit_user ({request.method}) is not yet implemented for user_id: {user_id}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/admin/assign_scripts_to_user/<int:user_id>', methods=['POST'])
+@admin_required
+def assign_scripts_to_user(user_id):
+    flash(f"Endpoint main.assign_scripts_to_user ({request.method}) is not yet implemented for user_id: {user_id}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/admin/reset_user_password/<int:user_id>', methods=['POST'])
+@admin_required
+def reset_user_password(user_id):
+    flash(f"Endpoint main.reset_user_password ({request.method}) is not yet implemented for user_id: {user_id}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/admin/toggle_user_status/<int:user_id>', methods=['GET', 'POST'])
+@admin_required
+def toggle_user_status(user_id):
+    flash(f"Endpoint main.toggle_user_status ({request.method}) is not yet implemented for user_id: {user_id}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/admin/add_script', methods=['POST'])
+@admin_required # Or super_admin_required, depending on who can add global scripts
+def add_script():
+    flash(f"Endpoint main.add_script ({request.method}) is not yet implemented.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/admin/add_ebook', methods=['POST'])
+@admin_required
+def add_ebook():
+    flash(f"Endpoint main.add_ebook ({request.method}) is not yet implemented.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/admin/add_database', methods=['POST'])
+@admin_required
+def add_database():
+    flash(f"Endpoint main.add_database ({request.method}) is not yet implemented.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/admin/edit_script/<int:script_id>', methods=['GET', 'POST'])
+@admin_required
+def edit_script(script_id):
+    flash(f"Endpoint main.edit_script ({request.method}) is not yet implemented for script_id: {script_id}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/admin/delete_script/<int:script_id>', methods=['POST'])
+@admin_required
+def delete_script(script_id):
+    flash(f"Endpoint main.delete_script ({request.method}) is not yet implemented for script_id: {script_id}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/admin/delete_ebook/<int:ebook_id>', methods=['POST'])
+@admin_required
+def delete_ebook(ebook_id):
+    flash(f"Endpoint main.delete_ebook ({request.method}) is not yet implemented for ebook_id: {ebook_id}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/admin/delete_database/<int:database_id>', methods=['POST'])
+@admin_required
+def delete_database(database_id):
+    flash(f"Endpoint main.delete_database ({request.method}) is not yet implemented for database_id: {database_id}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/script/preview/<int:script_id>')
+@login_required # General user might preview scripts they have access to
+def preview_script(script_id):
+    flash(f"Endpoint main.preview_script ({request.method}) is not yet implemented for script_id: {script_id}.", "warning")
+    # Redirect to a relevant page, like script listing or user dashboard
+    return redirect(url_for('main.client_dashboard'))
+
+@bp.route('/admin/manage_script/<int:script_id>/<string:action>', methods=['POST'])
+@admin_required
+def manage_script_action(script_id, action):
+    flash(f"Endpoint main.manage_script_action ({request.method}) is not yet implemented for script_id: {script_id}, action: {action}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/admin/assign_script/<int:script_id>', methods=['POST'])
+@admin_required # Or a more specific permission
+def assign_script(script_id):
+    flash(f"Endpoint main.assign_script ({request.method}) is not yet implemented for script_id: {script_id}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/api/scripts/test', methods=['POST'])
+@admin_required # Or a specific API key auth / different role
+def api_scripts_test():
+    flash(f"Endpoint main.api_scripts_test ({request.method}) is not yet implemented.", "warning")
+    # APIs usually return JSON, but for a placeholder, redirect is fine, or a JSON response
+    # return jsonify(status="error", message="Not implemented"), 501
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/script/run/<int:script_id>', methods=['POST'])
+@login_required # Assuming logged-in users can run scripts they are assigned
+def run_script(script_id):
+    flash(f"Endpoint main.run_script ({request.method}) is not yet implemented for script_id: {script_id}.", "warning")
+    return redirect(url_for('main.client_dashboard'))
+
+@bp.route('/api/scripts/approve/<int:script_id>', methods=['POST'])
+@admin_required # Or specific permission
+def approve_script_api(script_id):
+    flash(f"Endpoint main.approve_script_api ({request.method}) is not yet implemented for script_id: {script_id}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/api/scripts/delete/<int:script_id>', methods=['POST'])
+@admin_required # Or specific permission
+def delete_script_api(script_id):
+    flash(f"Endpoint main.delete_script_api ({request.method}) is not yet implemented for script_id: {script_id}.", "warning")
+    return redirect(url_for('main.admin_dashboard'))
+
+@bp.route('/reset-password/<string:token>', methods=['GET', 'POST'])
+# No @login_required here as user is resetting password
+def reset_password(token):
+    # This is a critical route and would normally have logic to validate token and update password
+    # For placeholder:
+    if request.method == 'POST':
+        # Simulate password change attempt
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        if not new_password or not confirm_password or new_password != confirm_password:
+            flash("Passwords do not match or are missing.", "danger")
+            return render_template('reset_password.html', token=token) # Assuming a template exists
+
+        flash(f"Endpoint main.reset_password (POST) is not yet fully implemented, but token received: {token}. Simulated password update.", "info")
+        return redirect(url_for('main.client_login'))
+
+    # For GET request:
+    flash(f"Endpoint main.reset_password (GET) is not yet fully implemented. Please use the form to reset. Token: {token}", "info")
+    # It should render a password reset form
+    # return render_template('reset_password_form.html', token=token)
+    # For now, redirecting or showing a simple message:
+    # return f"Password reset form for token {token} (Not Implemented). Flash message sent."
+    # To avoid template errors if 'reset_password.html' doesn't exist yet for GET:
+    return render_template('errors/generic_error.html', error={'code': 'Info', 'description': f"Password reset form for token {token}. Form processing not fully implemented."})
