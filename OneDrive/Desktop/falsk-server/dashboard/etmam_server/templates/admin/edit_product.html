@@ -1,0 +1,75 @@
+{% extends "admin/base.html" %}
+
+{% block title %}تعديل المنتج{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">تعديل المنتج: {{ product.name }}</h3>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('main.edit_product', product_id=product.id) }}" method="POST" enctype="multipart/form-data">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">اسم المنتج</label>
+                                    <input type="text" class="form-control" name="name" value="{{ product.name }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">السعر</label>
+                                    <input type="number" class="form-control" name="price" step="0.01" value="{{ product.price }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">نوع المنتج</label>
+                                    <input type="text" class="form-control" value="{{ product.type }}" readonly>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" name="is_active" id="is_active" {% if product.is_active %}checked{% endif %}>
+                                        <label class="form-check-label" for="is_active">نشط</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">الوصف</label>
+                                    <textarea class="form-control" name="description" rows="4" required>{{ product.description }}</textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">صورة المنتج</label>
+                                    {% if product.image_url %}
+                                    <div class="mb-2">
+                                        <img src="{{ product.image_url }}" alt="{{ product.name }}" class="img-thumbnail" style="max-height: 200px;">
+                                    </div>
+                                    {% endif %}
+                                    <input type="file" class="form-control" name="image" accept="image/*">
+                                </div>
+                                {% if product.type == 'script' %}
+                                <div class="mb-3">
+                                    <label class="form-label">السكربت المرتبط</label>
+                                    <select class="form-select" name="script_id">
+                                        <option value="">اختر سكربت...</option>
+                                        {% for script in scripts %}
+                                        <option value="{{ script.id }}" {% if script.id == product.script_id %}selected{% endif %}>
+                                            {{ script.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-end mt-3">
+                            <a href="{{ url_for('main.admin_products') }}" class="btn btn-secondary">إلغاء</a>
+                            <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

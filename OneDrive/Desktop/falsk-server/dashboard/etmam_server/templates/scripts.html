@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}السكربتات - منصة إتمام{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="row mb-5">
+        <div class="col-12 text-center">
+            <h1 class="display-4 mb-3">سكربتات إتمام</h1>
+            <p class="lead mb-4">مجموعة متميزة من السكربتات المتخصصة في القطاع العقاري</p>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="filters-container p-3 rounded">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <div class="search-box">
+                            <input type="text" class="form-control" id="searchInput" placeholder="ابحث عن سكربت...">
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="d-flex justify-content-end gap-2">
+                            <button class="btn btn-outline-primary category-filter active" data-category="all">الكل</button>
+                            <button class="btn btn-outline-primary category-filter" data-category="search">البحث</button>
+                            <button class="btn btn-outline-primary category-filter" data-category="analysis">التحليل</button>
+                            <button class="btn btn-outline-primary category-filter" data-category="automation">الأتمتة</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts Grid -->
+    <div class="row" id="scriptsContainer">
+        {% for script in scripts %}
+        <div class="col-md-4 mb-4 script-item" data-category="{{ script.category }}">
+            <div class="script-card">
+                <div class="script-card-header">
+                    <div class="script-icon">
+                        <i class="fas {{ script.icon|default('fa-code') }}"></i>
+                    </div>
+                    {% if script.is_featured %}
+                    <span class="badge bg-warning">مميز</span>
+                    {% endif %}
+                </div>
+                <div class="script-card-body">
+                    <h3>{{ script.name }}</h3>
+                    <p class="script-description">{{ script.description }}</p>
+                    <div class="script-features">
+                        <span><i class="fas fa-check-circle"></i> تحديثات مجانية</span>
+                        <span><i class="fas fa-headset"></i> دعم فني</span>
+                        <span><i class="fas fa-shield-alt"></i> حماية متكاملة</span>
+                    </div>
+                </div>
+                <div class="script-card-footer">
+                    <div class="price">{{ "%.2f"|format(script.price) }} ريال</div>
+                    <div class="subscription-options">
+                        <div class="dropdown">
+                            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                خيارات الاشتراك
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('request_script', script_id=script.id, period=1) }}">شهر ({{ "%.2f"|format(script.price) }} ريال)</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('request_script', script_id=script.id, period=3) }}">3 أشهر ({{ "%.2f"|format(script.price * 2.5) }} ريال)</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('request_script', script_id=script.id, period=6) }}">6 أشهر ({{ "%.2f"|format(script.price * 4.5) }} ريال)</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('request_script', script_id=script.id, period=12) }}">سنة ({{ "%.2f"|format(script.price * 8) }} ريال)</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.filters-container {
+    background: white;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+}
+
+.search-box {
+    position: relative;
+}
+
+.search-box input {
+    padding-right: 40px;
+    border-radius: 20px;
+}
+
+.category-filter {
+    border-radius: 20px;
+    padding: 8px 20px;
+    transition: all 0.3s;
+}
+
+.category-filter:hover {
+    transform: translateY(-2px);
+}
+
+.script-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+    transition: transform 0.3s;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.script-card:hover {
+    transform: translateY(-5px);
+}
+
+.script-card-header {
+    padding: 1.5rem;
+    text-align: center;
+    position: relative;
+    background: linear-gradient(45deg, var(--bs-primary), #2980b9);
+    color: white;
+}
+
+.script-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1rem;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.script-icon i {
+    font-size: 1.5rem;
+    color: white;
+}
+
+.badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
+.script-card-body {
+    padding: 1.5rem;
+    flex-grow: 1;
+}
+
+.script-description {
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+
+.script-features {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.script-features span {
+    color: #6c757d;
+}
+
+.script-features i {
+    color: var(--bs-primary);
+    margin-left: 0.5rem;
+}
+
+.script-card-footer {
+    padding: 1.5rem;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.price {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #28a745;
+}
+
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.dropdown-item {
+    padding: 10px 20px;
+    transition: background-color 0.3s;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilters = document.querySelectorAll('.category-filter');
+    const scripts = document.querySelectorAll('.script-item');
+
+    // وظيفة البحث
+    searchInput.addEventListener('input', filterScripts);
+
+    // وظيفة تصفية الفئات
+    categoryFilters.forEach(filter => {
+        filter.addEventListener('click', function() {
+            categoryFilters.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            filterScripts();
+        });
+    });
+
+    function filterScripts() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const activeCategory = document.querySelector('.category-filter.active').dataset.category;
+
+        scripts.forEach(script => {
+            const scriptName = script.querySelector('h3').textContent.toLowerCase();
+            const scriptDescription = script.querySelector('.script-description').textContent.toLowerCase();
+            const scriptCategory = script.dataset.category;
+            
+            const matchesSearch = scriptName.includes(searchTerm) || scriptDescription.includes(searchTerm);
+            const matchesCategory = activeCategory === 'all' || scriptCategory === activeCategory;
+
+            if (matchesSearch && matchesCategory) {
+                script.style.display = 'block';
+            } else {
+                script.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+{% endblock %} 
