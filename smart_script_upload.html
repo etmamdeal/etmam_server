@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>رفع سكربت ذكي</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #fbfbfb;
+            padding: 20px;
+            text-align: center;
+        }
+        .upload-box {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 10px #ccc;
+            width: 60%;
+            margin: auto;
+        }
+        input[type=file], button {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #2b8c31;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #276f2b;
+        }
+        .result {
+            background: #e7f4e4;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 10px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="upload-box">
+        <h2>رفع سكربت ذكي</h2>
+        <form action="/analyze-script" method="post" enctype="multipart/form-data">
+            <input type="file" name="script_file" accept=".py" required>
+            <br>
+            <button type="submit">تحليل السكربت</button>
+        </form>
+    </div>
+</body>
+</html>

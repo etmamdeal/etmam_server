@@ -1,0 +1,55 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>نتيجة تحليل السكربت</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #fbfbfb;
+            padding: 20px;
+            direction: rtl;
+        }
+        .container {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 0 10px #ccc;
+            max-width: 700px;
+            margin: auto;
+        }
+        h2 {
+            color: #2b8c31;
+            text-align: center;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #f0f0f0;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .func-title {
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>نتيجة تحليل السكربت: {{ result.filename }}</h2>
+        <ul>
+            {% for func in result.functions %}
+            <li>
+                <div class="func-title">الدالة: {{ func.name }}</div>
+                <div>المتغيرات: {{ func.parameters | join(', ') }}</div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>

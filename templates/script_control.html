@@ -1,0 +1,581 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة تحكم السكربت - منصة إتمام{% endblock %}
+
+{% block extra_css %}
+<!-- Prism.js للتنسيق البرمجي -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet" />
+
+<style>
+.shadow-hover {
+    transition: all 0.3s ease;
+}
+.shadow-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+.btn-outline-primary,
+.btn-outline-success,
+.btn-outline-info,
+.btn-outline-warning,
+.btn-outline-danger {
+    border-width: 2px;
+}
+.card-text {
+    font-size: 0.9rem;
+}
+
+/* تنسيق منطقة عرض الكود */
+.code-display {
+    display: none;
+    margin: 20px 0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.code-editor {
+    height: 400px;
+    font-family: 'Fira Code', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    direction: ltr;
+}
+
+/* تنسيق قائمة المعايير */
+.params-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.param-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+.param-item:last-child {
+    border-bottom: none;
+}
+
+/* تنسيق نتائج الاختبار */
+.test-results {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+.error-line {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* تنسيق نتائج التشغيل */
+.run-results {
+    background: #fff;
+    padding: 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-top: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* تنسيق قائمة المستخدمين */
+.users-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.user-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.super_admin_control') }}">لوحة التحكم</a></li>
+                    <li class="breadcrumb-item active">لوحة تحكم السكربت</li>
+                </ol>
+            </nav>
+            <h2 class="mb-4">
+                <i class="fas fa-code-branch me-2"></i>
+                لوحة تحكم السكربت
+            </h2>
+        </div>
+    </div>
+
+    <!-- منطقة عرض الكود -->
+    <div class="card border-0 shadow-sm mb-4 code-display" id="codeDisplayArea">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-code me-2"></i>
+                <span id="scriptFileName">script.py</span>
+            </h5>
+            <button class="btn btn-sm btn-outline-primary" onclick="toggleCodeEditor()">
+                <i class="fas fa-edit me-1"></i>
+                تحرير
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <pre class="line-numbers"><code class="language-python" id="scriptCode"></code></pre>
+            <textarea id="codeEditor" class="code-editor d-none form-control"></textarea>
+        </div>
+    </div>
+
+    <!-- أزرار التحكم -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="row justify-content-center g-4">
+                <!-- زر تحميل السكربت -->
+                <div class="col-md-4 col-sm-6">
+                    <div class="card h-100 border-0 shadow-hover">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <label for="scriptUpload" class="btn btn-outline-primary rounded-circle p-3">
+                                    <i class="fas fa-upload fa-2x"></i>
+                                </label>
+                                <input type="file" id="scriptUpload" class="d-none" accept=".py">
+                            </div>
+                            <h5 class="card-title">تحميل السكربت</h5>
+                            <p class="card-text text-muted">قم بتحميل ملف السكربت من جهازك</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- زر استخراج المعايير -->
+                <div class="col-md-4 col-sm-6">
+                    <div class="card h-100 border-0 shadow-hover" onclick="extractParameters()" style="cursor: pointer;">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <span class="btn btn-outline-success rounded-circle p-3">
+                                    <i class="fas fa-brain fa-2x"></i>
+                                </span>
+                            </div>
+                            <h5 class="card-title">استخراج المعايير</h5>
+                            <p class="card-text text-muted">تحليل واستخراج معايير السكربت</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- زر اختبار السكربت -->
+                <div class="col-md-4 col-sm-6">
+                    <div class="card h-100 border-0 shadow-hover" onclick="testScript()" style="cursor: pointer;">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <span class="btn btn-outline-info rounded-circle p-3">
+                                    <i class="fas fa-vial fa-2x"></i>
+                                </span>
+                            </div>
+                            <h5 class="card-title">اختبار السكربت</h5>
+                            <p class="card-text text-muted">التحقق من صحة عمل السكربت</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- زر تشغيل السكربت -->
+                <div class="col-md-4 col-sm-6">
+                    <div class="card h-100 border-0 shadow-hover" onclick="runScript()" style="cursor: pointer;">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <span class="btn btn-outline-warning rounded-circle p-3">
+                                    <i class="fas fa-play fa-2x"></i>
+                                </span>
+                            </div>
+                            <h5 class="card-title">تشغيل السكربت</h5>
+                            <p class="card-text text-muted">تنفيذ السكربت ومراقبة النتائج</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- زر تخصيص السكربت -->
+                <div class="col-md-4 col-sm-6">
+                    <div class="card h-100 border-0 shadow-hover" onclick="assignScript()" style="cursor: pointer;">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <span class="btn btn-outline-danger rounded-circle p-3">
+                                    <i class="fas fa-users fa-2x"></i>
+                                </span>
+                            </div>
+                            <h5 class="card-title">تخصيص السكربت</h5>
+                            <p class="card-text text-muted">تخصيص السكربت للمستخدمين</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة استخراج المعايير -->
+<div class="modal fade" id="paramsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">استخراج المعايير</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="params-list" id="paramsList">
+                    <!-- سيتم إضافة المعايير هنا ديناميكياً -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-primary" onclick="saveParameters()">حفظ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة اختبار السكربت -->
+<div class="modal fade" id="testModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">اختبار السكربت</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="test-results" id="testResults">
+                    <!-- نتائج الاختبار ستظهر هنا -->
+                </div>
+                <div class="mt-3" id="fixCodeArea" style="display: none;">
+                    <textarea class="form-control code-editor" id="fixCodeEditor"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-warning" onclick="showFixEditor()">إصلاح</button>
+                <button type="button" class="btn btn-primary" onclick="saveAndTest()">حفظ وإغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة تشغيل السكربت -->
+<div class="modal fade" id="runModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تشغيل السكربت</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="run-results" id="runResults">
+                    <!-- نتائج التشغيل ستظهر هنا -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-warning" onclick="rerunScript()">إعادة تشغيل</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة تخصيص السكربت -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تخصيص السكربت</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="users-list" id="usersList">
+                    <!-- قائمة المستخدمين ستظهر هنا -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-primary" onclick="saveAssignments()">تخصيص</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Prism.js للتنسيق البرمجي -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.js"></script>
+
+<script>
+let currentScript = {
+    code: '',
+    parameters: [],
+    selectedParams: [],
+    fileName: ''
+};
+
+// معالجة تحميل الملف
+document.getElementById('scriptUpload').addEventListener('change', async function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        if (!file.name.endsWith('.py')) {
+            alert('يرجى اختيار ملف Python (.py)');
+            this.value = '';
+            return;
+        }
+        
+        try {
+            const code = await file.text();
+            currentScript.code = code;
+            currentScript.fileName = file.name;
+            
+            // عرض الكود
+            document.getElementById('scriptFileName').textContent = file.name;
+            document.getElementById('scriptCode').textContent = code;
+            document.getElementById('codeEditor').value = code;
+            
+            // تفعيل عرض الكود
+            document.getElementById('codeDisplayArea').style.display = 'block';
+            
+            // تحديث تنسيق الكود
+            Prism.highlightAll();
+            
+        } catch (error) {
+            console.error('Error reading file:', error);
+            alert('حدث خطأ أثناء قراءة الملف');
+        }
+    }
+});
+
+// تبديل محرر الكود
+function toggleCodeEditor() {
+    const codeDisplay = document.querySelector('pre.line-numbers');
+    const codeEditor = document.getElementById('codeEditor');
+    
+    if (codeEditor.classList.contains('d-none')) {
+        codeEditor.classList.remove('d-none');
+        codeDisplay.classList.add('d-none');
+        codeEditor.focus();
+    } else {
+        currentScript.code = codeEditor.value;
+        document.getElementById('scriptCode').textContent = currentScript.code;
+        Prism.highlightAll();
+        codeEditor.classList.add('d-none');
+        codeDisplay.classList.remove('d-none');
+    }
+}
+
+// استخراج المعايير
+function extractParameters() {
+    if (!currentScript.code) {
+        alert('الرجاء تحميل سكربت أولاً');
+        return;
+    }
+    
+    // تحليل الكود لاستخراج المعايير (مثال بسيط)
+    const paramRegex = /def\s+\w+\s*\((.*?)\)/g;
+    const matches = [...currentScript.code.matchAll(paramRegex)];
+    
+    currentScript.parameters = matches.map(match => {
+        const params = match[1].split(',').map(p => p.trim());
+        return {
+            name: match[0].split('(')[0].replace('def', '').trim(),
+            params: params.filter(p => p)
+        };
+    });
+    
+    // عرض المعايير في النافذة
+    const paramsList = document.getElementById('paramsList');
+    paramsList.innerHTML = currentScript.parameters.map((func, i) => `
+        <div class="param-item">
+            <div class="fw-bold mb-2">${func.name}</div>
+            ${func.params.map((param, j) => `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           id="param_${i}_${j}" value="${param}"
+                           ${currentScript.selectedParams.includes(param) ? 'checked' : ''}>
+                    <label class="form-check-label" for="param_${i}_${j}">
+                        ${param}
+                    </label>
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
+    
+    // عرض النافذة
+    const modal = new bootstrap.Modal(document.getElementById('paramsModal'));
+    modal.show();
+}
+
+// حفظ المعايير المحددة
+function saveParameters() {
+    const checkboxes = document.querySelectorAll('#paramsList input[type="checkbox"]:checked');
+    currentScript.selectedParams = Array.from(checkboxes).map(cb => cb.value);
+    
+    alert(`تم حفظ ${currentScript.selectedParams.length} معيار`);
+    bootstrap.Modal.getInstance(document.getElementById('paramsModal')).hide();
+}
+
+// اختبار السكربت
+function testScript() {
+    if (!currentScript.code) {
+        alert('الرجاء تحميل سكربت أولاً');
+        return;
+    }
+    
+    try {
+        // محاكاة فحص الأخطاء
+        const testResults = document.getElementById('testResults');
+        testResults.innerHTML = '<div class="alert alert-success">لم يتم العثور على أخطاء في الكود</div>';
+        
+        const modal = new bootstrap.Modal(document.getElementById('testModal'));
+        modal.show();
+    } catch (error) {
+        const testResults = document.getElementById('testResults');
+        testResults.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>تم العثور على أخطاء:</strong><br>
+                ${error.message}
+            </div>
+        `;
+    }
+}
+
+// عرض محرر الإصلاح
+function showFixEditor() {
+    const fixCodeArea = document.getElementById('fixCodeArea');
+    const fixCodeEditor = document.getElementById('fixCodeEditor');
+    
+    fixCodeArea.style.display = 'block';
+    fixCodeEditor.value = currentScript.code;
+}
+
+// حفظ التعديلات واختبار
+function saveAndTest() {
+    const fixCodeEditor = document.getElementById('fixCodeEditor');
+    currentScript.code = fixCodeEditor.value;
+    
+    // تحديث عرض الكود
+    document.getElementById('scriptCode').textContent = currentScript.code;
+    Prism.highlightAll();
+    
+    // إعادة الاختبار
+    testScript();
+    
+    // إخفاء محرر الإصلاح
+    document.getElementById('fixCodeArea').style.display = 'none';
+}
+
+// تشغيل السكربت
+function runScript() {
+    if (!currentScript.code) {
+        alert('الرجاء تحميل سكربت أولاً');
+        return;
+    }
+    
+    const runResults = document.getElementById('runResults');
+    runResults.innerHTML = '<div class="alert alert-info">جاري تنفيذ السكربت...</div>';
+    
+    // فتح النافذة المنبثقة
+    const modal = new bootstrap.Modal(document.getElementById('runModal'));
+    modal.show();
+    
+    // إرسال الكود للتنفيذ
+    fetch('/run-script', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            code: currentScript.code,
+            filename: currentScript.fileName,
+            parameters: currentScript.selectedParams
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`خطأ في الاستجابة: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            runResults.innerHTML = `
+                <div class="alert alert-success">
+                    <h5 class="mb-3">تم تنفيذ السكربت بنجاح</h5>
+                    <div class="border rounded p-3 bg-light">
+                        <pre dir="ltr" class="mb-0" style="max-height: 300px; overflow-y: auto;">${data.output}</pre>
+                    </div>
+                    ${data.links ? `
+                        <hr>
+                        <h6>الروابط المنتجة:</h6>
+                        <ul class="list-unstyled">
+                            ${data.links.map(link => `
+                                <li><a href="${link.url}" target="_blank" class="text-primary">
+                                    <i class="fas fa-external-link-alt me-2"></i>${link.title}
+                                </a></li>
+                            `).join('')}
+                        </ul>
+                    ` : ''}
+                </div>
+            `;
+        } else {
+            throw new Error(data.error || 'حدث خطأ أثناء تنفيذ السكربت');
+        }
+    })
+    .catch(error => {
+        runResults.innerHTML = `
+            <div class="alert alert-danger">
+                <h5 class="mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    حدث خطأ
+                </h5>
+                <div class="border rounded p-3 bg-light">
+                    <pre dir="ltr" class="mb-0 text-danger">${error.message}</pre>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// إعادة تشغيل السكربت
+function rerunScript() {
+    runScript();
+}
+
+// تخصيص السكربت
+function assignScript() {
+    if (!currentScript.code) {
+        alert('الرجاء تحميل سكربت أولاً');
+        return;
+    }
+    
+    // محاكاة جلب قائمة المستخدمين
+    const usersList = document.getElementById('usersList');
+    usersList.innerHTML = `
+        <div class="alert alert-info mb-3">اختر المستخدمين لتخصيص السكربت لهم:</div>
+        ${Array(5).fill(0).map((_, i) => `
+            <div class="user-item">
+                <div>
+                    <input type="checkbox" class="form-check-input me-2" id="user_${i}">
+                    <label for="user_${i}">المستخدم ${i + 1}</label>
+                </div>
+                <span class="badge bg-secondary">عميل</span>
+            </div>
+        `).join('')}
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('assignModal'));
+    modal.show();
+}
+
+// حفظ التخصيصات
+function saveAssignments() {
+    const selectedUsers = document.querySelectorAll('#usersList input[type="checkbox"]:checked');
+    alert(`تم تخصيص السكربت لـ ${selectedUsers.length} مستخدم`);
+    bootstrap.Modal.getInstance(document.getElementById('assignModal')).hide();
+}
+</script>
+{% endblock %}

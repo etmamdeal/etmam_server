@@ -1,0 +1,102 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>عروض العقارات</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #fdfaf5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 0 10px #ccc;
+        }
+        h2 {
+            text-align: center;
+            color: #2b8c31;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        label, select {
+            display: block;
+            margin-bottom: 10px;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: #2b8c31;
+            color: white;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .offer {
+            background-color: #f4f4f4;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+        }
+        .offer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>بحث في العروض العقارية</h2>
+    <form method="get" action="/real-estate">
+        <label for="city">المدينة</label>
+        <select name="city" id="city">
+            <option value="">-- اختر المدينة --</option>
+            <option value="جدة">جدة</option>
+            <option value="الرياض">الرياض</option>
+            <option value="مكة">مكة</option>
+        </select>
+
+        <label for="district">الحي</label>
+        <select name="district" id="district">
+            <option value="">-- اختر الحي --</option>
+            <option value="الشاطئ">الشاطئ</option>
+            <option value="العزيزية">العزيزية</option>
+            <option value="الروابي">الروابي</option>
+        </select>
+
+        <label for="type">نوع العقار</label>
+        <select name="type" id="type">
+            <option value="">-- اختر النوع --</option>
+            <option value="فيلا">فيلا</option>
+            <option value="شقة">شقة</option>
+            <option value="أرض">أرض</option>
+        </select>
+
+        <button type="submit">بحث</button>
+    </form>
+
+    {% if offers %}
+        <h3>عدد النتائج: {{ offers|length }}</h3>
+        {% for offer in offers %}
+            <div class="offer">
+                <strong>{{ offer.get('العنوان', 'بدون عنوان') }}</strong><br>
+                🏠 {{ offer.get('الموقع', '') }}<br>
+                💰 {{ offer.get('السعر', '') }}<br>
+                🔗 <a href="{{ offer.get('الرابط') }}" target="_blank">رابط العرض</a>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+</body>
+</html>

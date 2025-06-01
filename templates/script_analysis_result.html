@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}نتيجة تحليل السكربت - منصة إتمام{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.super_admin_control') }}">لوحة التحكم</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.smart_script_upload') }}">رفع سكربت ذكي</a></li>
+                    <li class="breadcrumb-item active">نتيجة التحليل</li>
+                </ol>
+            </nav>
+            <h2 class="mb-4">
+                <i class="fas fa-file-code me-2"></i>
+                نتيجة تحليل السكربت: {{ result.filename }}
+            </h2>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-4">تفاصيل الدوال المكتشفة</h5>
+            {% if result.functions %}
+                <div class="list-group">
+                    {% for func in result.functions %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-1">{{ func.name }}</h6>
+                                <span class="badge bg-primary rounded-pill">{{ func.parameters | length }} متغير</span>
+                            </div>
+                            {% if func.parameters %}
+                                <p class="mb-1 text-muted">
+                                    <small>المتغيرات: {{ func.parameters | join(', ') }}</small>
+                                </p>
+                            {% else %}
+                                <p class="mb-1 text-muted">
+                                    <small>لا توجد متغيرات</small>
+                                </p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <form action="{{ url_for('main.generate_product') }}" method="post" class="mt-4">
+                    <input type="hidden" name="filename" value="{{ result.filename }}">
+                    <input type="hidden" name="functions" value='{{ result.functions | tojson | safe }}'>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-magic me-2"></i>
+                        تحويل إلى منتج رقمي
+                    </button>
+                </form>
+            {% else %}
+                <div class="alert alert-info">
+                    لم يتم العثور على أي دوال في هذا السكربت
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('main.smart_script_upload') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-right me-2"></i>
+            رجوع
+        </a>
+    </div>
+</div>
+{% endblock %}
