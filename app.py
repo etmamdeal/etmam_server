@@ -4,7 +4,7 @@ import os
 from functools import wraps
 from flask import Flask
 from flask_login import LoginManager
-from models import User
+from .models import User # Changed to relative import
 
 # إنشاء Blueprint
 bp = Blueprint('main', __name__)

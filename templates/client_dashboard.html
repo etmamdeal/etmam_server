@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('لوحة تحكم العميل') }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="page-header">
+        <h1>{{ _('مرحباً بك،') }} {{ current_user.full_name or current_user.username }}!</h1>
+    </div>
+
+    <p class="lead">{{ _('هذه لوحة التحكم الخاصة بك.') }}</p>
+
+    <div class="row mt-4">
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-code me-2"></i>{{ _('سكربتاتي') }}</h5>
+                    <p class="card-text">{{ _('عرض وإدارة السكربتات الخاصة بك.') }}</p>
+                    <a href="{{ url_for('main.my_scripts') }}" class="btn btn-primary">{{ _('الذهاب إلى سكربتاتي') }}</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-history me-2"></i>{{ _('سجل التشغيل') }}</h5>
+                    <p class="card-text">{{ _('مراجعة سجل تشغيل السكربتات الخاصة بك.') }}</p>
+                    <a href="{{ url_for('main.script_logs') }}" class="btn btn-primary">{{ _('عرض السجل') }}</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-user-circle me-2"></i>{{ _('ملفي الشخصي') }}</h5>
+                    <p class="card-text">{{ _('تحديث معلومات ملفك الشخصي وتغيير كلمة المرور.') }}</p>
+                    <a href="{{ url_for('main.profile') }}" class="btn btn-primary">{{ _('الذهاب للملف الشخصي') }}</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-store me-2"></i>{{ _('المنتجات الرقمية') }}</h5>
+                    <p class="card-text">{{ _('تصفح وشراء منتجات رقمية جديدة.') }}</p>
+                    <a href="{{ url_for('main.products') }}" class="btn btn-primary">{{ _('تصفح المنتجات') }}</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-question-circle me-2"></i>{{ _('الدعم الفني') }}</h5>
+                    <p class="card-text">{{ _('تواصل مع فريق الدعم لأي مساعدة.') }}</p>
+                    <a href="{{ url_for('main.contact_us') }}" class="btn btn-primary">{{ _('تواصل معنا') }}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

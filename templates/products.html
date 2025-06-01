@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}المنتجات الرقمية{% endblock %}
+{% block title %}{{ _('المنتجات الرقمية') }}{% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <!-- Hero Section -->
     <div class="row mb-5">
         <div class="col-12 text-center">
-            <h1 class="display-4 mb-3">المنتجات الرقمية</h1>
-            <p class="lead mb-4">مجموعة متميزة من المنتجات الرقمية لتطوير أعمالك</p>
+            <h1 class="display-4 mb-3">{{ _('المنتجات الرقمية') }}</h1>
+            <p class="lead mb-4">{{ _('مجموعة متميزة من المنتجات الرقمية لتطوير أعمالك') }}</p>
         </div>
     </div>
 
@@ -18,11 +18,11 @@
         <div class="col-md-4 mb-4">
             <div class="category-card h-100">
                 <a href="{{ url_for('scripts') }}" class="text-decoration-none">
-                    <img src="{{ url_for('static', filename='images/scripts.jpg') }}" alt="السكربتات" class="img-fluid rounded-top" onerror="this.src='https://via.placeholder.com/400x200?text=السكربتات'">
+                    <img src="{{ url_for('static', filename='images/scripts.jpg') }}" alt="{{ _('السكربتات') }}" class="img-fluid rounded-top" onerror="this.src='https://via.placeholder.com/400x200?text={{ _('السكربتات') }}'">
                     <div class="category-content text-center p-4">
-                        <h3 class="text-dark">السكربتات</h3>
-                        <p class="text-muted">مجموعة متنوعة من السكربتات البرمجية لأتمتة أعمالك</p>
-                        <button class="btn btn-primary">استعراض السكربتات</button>
+                        <h3 class="text-dark">{{ _('السكربتات') }}</h3>
+                        <p class="text-muted">{{ _('مجموعة متنوعة من السكربتات البرمجية لأتمتة أعمالك') }}</p>
+                        <button class="btn btn-primary">{{ _('استعراض السكربتات') }}</button>
                     </div>
                 </a>
             </div>
@@ -31,11 +31,11 @@
         <!-- E-Books Category -->
         <div class="col-md-4 mb-4">
             <div class="category-card h-100">
-                <img src="{{ url_for('static', filename='images/ebooks.jpg') }}" alt="الكتب الإلكترونية" class="img-fluid rounded-top" onerror="this.src='https://via.placeholder.com/400x200?text=الكتب الإلكترونية'">
+                <img src="{{ url_for('static', filename='images/ebooks.jpg') }}" alt="{{ _('الكتب الإلكترونية') }}" class="img-fluid rounded-top" onerror="this.src='https://via.placeholder.com/400x200?text={{ _('الكتب الإلكترونية') }}'">
                 <div class="category-content text-center p-4">
-                    <h3>الكتب الإلكترونية</h3>
-                    <p class="text-muted">مجموعة من الكتب والأدلة الإرشادية المتخصصة</p>
-                    <button class="btn btn-primary">قريباً</button>
+                    <h3>{{ _('الكتب الإلكترونية') }}</h3>
+                    <p class="text-muted">{{ _('مجموعة من الكتب والأدلة الإرشادية المتخصصة') }}</p>
+                    <button class="btn btn-primary">{{ _('قريباً') }}</button>
                 </div>
             </div>
         </div>
@@ -43,11 +43,11 @@
         <!-- Databases Category -->
         <div class="col-md-4 mb-4">
             <div class="category-card h-100">
-                <img src="{{ url_for('static', filename='images/databases.jpg') }}" alt="قواعد البيانات" class="img-fluid rounded-top" onerror="this.src='https://via.placeholder.com/400x200?text=قواعد البيانات'">
+                <img src="{{ url_for('static', filename='images/databases.jpg') }}" alt="{{ _('قواعد البيانات') }}" class="img-fluid rounded-top" onerror="this.src='https://via.placeholder.com/400x200?text={{ _('قواعد البيانات') }}'">
                 <div class="category-content text-center p-4">
-                    <h3>قواعد البيانات</h3>
-                    <p class="text-muted">قواعد بيانات متخصصة في القطاع العقاري</p>
-                    <button class="btn btn-primary">قريباً</button>
+                    <h3>{{ _('قواعد البيانات') }}</h3>
+                    <p class="text-muted">{{ _('قواعد بيانات متخصصة في القطاع العقاري') }}</p>
+                    <button class="btn btn-primary">{{ _('قريباً') }}</button>
                 </div>
             </div>
         </div>

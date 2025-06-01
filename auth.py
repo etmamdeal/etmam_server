@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import redirect, url_for, flash, request
 from flask_login import current_user
+from flask_babel import gettext as _ # Import gettext
 
 def check_role_and_redirect():
     """التحقق من دور المستخدم وتوجيهه للصفحة المناسبة"""
@@ -17,11 +18,11 @@ def super_admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash("يجب تسجيل الدخول أولاً.", "danger")
+            flash(_("يجب تسجيل الدخول أولاً."), "danger") # Wrapped
             return redirect(url_for('main.admin_login'))
             
         if not current_user.is_super_admin:
-            flash("غير مصرح لك بالدخول هنا.", "danger")
+            flash(_("غير مصرح لك بالدخول هنا."), "danger") # Wrapped
             return redirect(url_for('main.index'))
             
         return f(*args, **kwargs)
@@ -32,11 +33,11 @@ def client_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash("يجب تسجيل الدخول أولاً.", "danger")
+            flash(_("يجب تسجيل الدخول أولاً."), "danger") # Wrapped
             return redirect(url_for('main.client_login'))
             
         if current_user.is_super_admin:
-            flash("هذه الصفحة مخصصة للعملاء فقط.", "danger")
+            flash(_("هذه الصفحة مخصصة للعملاء فقط."), "danger") # Wrapped
             dashboard = check_role_and_redirect()
             return redirect(url_for(dashboard)) if dashboard else redirect(url_for('main.index'))
             
@@ -49,11 +50,11 @@ def check_permission(permission):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
-                flash("يجب تسجيل الدخول أولاً.", "danger")
+                flash(_("يجب تسجيل الدخول أولاً."), "danger") # Wrapped
                 return redirect(url_for('main.admin_login'))
                 
             if not current_user.has_permission(permission):
-                flash("ليس لديك الصلاحية الكافية.", "danger")
+                flash(_("ليس لديك الصلاحية الكافية."), "danger") # Wrapped
                 dashboard = check_role_and_redirect()
                 return redirect(url_for(dashboard)) if dashboard else redirect(url_for('main.index'))
                 

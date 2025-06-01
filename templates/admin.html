@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}لوحة تحكم السوبر أدمن - منصة إتمام{% endblock %}
+{% block title %}{{ _('لوحة تحكم السوبر أدمن') }} - {{ _('منصة إتمام') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -84,21 +84,21 @@
                 <div class="container-fluid">
                     <span class="navbar-brand">
                         <i class="fas fa-user-shield me-2"></i>
-                        لوحة تحكم السوبر أدمن
+                        {{ _('لوحة تحكم السوبر أدمن') }}
                     </span>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar" aria-label="{{ _('Toggle navigation') }}">
                         <span class="navbar-toggler-icon"></span>
                     </button>
                     <div class="collapse navbar-collapse" id="adminNavbar">
                         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                             <li class="nav-item">
-                                <a class="nav-link active" href="#users">المستخدمين</a>
+                                <a class="nav-link active" href="#users">{{ _('المستخدمين') }}</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="#scripts">السكربتات</a>
+                                <a class="nav-link" href="#scripts">{{ _('السكربتات') }}</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="#stats">الإحصائيات</a>
+                                <a class="nav-link" href="#stats">{{ _('الإحصائيات') }}</a>
                             </li>
                         </ul>
                     </div>
@@ -111,8 +111,8 @@
         {% if messages %}
             {% for category, message in messages %}
                 <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    {{ message }} {# Flash messages are translated in Python files #}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ _('Close') }}"></button>
                 </div>
             {% endfor %}
         {% endif %}
@@ -124,7 +124,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">السكربتات النشطة</h5>
+                    <h5 class="card-title">{{ _('السكربتات النشطة') }}</h5>
                     <h2 class="mb-0">{{ stats.active_scripts }}</h2>
                 </div>
             </div>
@@ -132,7 +132,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">السكربتات المعلقة</h5>
+                    <h5 class="card-title">{{ _('السكربتات المعلقة') }}</h5>
                     <h2 class="mb-0">{{ stats.pending_scripts }}</h2>
                 </div>
             </div>
@@ -143,7 +143,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">المستخدمين</h5>
+                    <h5 class="card-title">{{ _('المستخدمين') }}</h5>
                     <h2 class="mb-0">{{ stats.users_count }}</h2>
                 </div>
             </div>
@@ -154,7 +154,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">عمليات اليوم</h5>
+                    <h5 class="card-title">{{ _('عمليات اليوم') }}</h5>
                     <h2 class="mb-0">{{ stats.today_executions }}</h2>
                 </div>
             </div>
@@ -167,9 +167,9 @@
     <div class="card border-0 shadow-sm mb-4" id="users">
         <div class="card-header bg-transparent">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">إدارة المستخدمين</h5>
+                <h5 class="mb-0">{{ _('إدارة المستخدمين') }}</h5>
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                    <i class="fas fa-plus me-2"></i>إضافة مستخدم جديد
+                    <i class="fas fa-plus me-2"></i>{{ _('إضافة مستخدم جديد') }}
                 </button>
             </div>
         </div>
@@ -178,12 +178,12 @@
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
-                            <th>الاسم الكامل</th>
-                            <th>اسم المستخدم</th>
-                            <th>البريد الإلكتروني</th>
-                            <th>السكربتات المخصصة</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
+                            <th>{{ _('الاسم الكامل') }}</th>
+                            <th>{{ _('اسم المستخدم') }}</th>
+                            <th>{{ _('البريد الإلكتروني') }}</th>
+                            <th>{{ _('السكربتات المخصصة') }}</th>
+                            <th>{{ _('الحالة') }}</th>
+                            <th>{{ _('الإجراءات') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -199,31 +199,31 @@
                             </td>
                             <td>
                                 <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
-                                    {{ 'مفعل' if user.is_active else 'معطل' }}
+                                    {{ _('مفعل') if user.is_active else _('معطل') }}
                                 </span>
                             </td>
                             <td>
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-sm btn-primary" 
                                             onclick="editUser('{{ user.id }}')"
-                                            title="تعديل المستخدم">
+                                            title="{{ _('تعديل المستخدم') }}">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     {% if current_user.has_permission('assign_scripts') %}
                                     <button type="button" class="btn btn-sm btn-info" 
                                             onclick="assignScripts('{{ user.id }}')"
-                                            title="تخصيص سكربتات">
+                                            title="{{ _('تخصيص سكربتات') }}">
                                         <i class="fas fa-code"></i>
                                     </button>
                                     {% endif %}
                                     <button type="button" class="btn btn-sm btn-warning" 
                                             onclick="resetPassword('{{ user.id }}')"
-                                            title="إعادة تعيين كلمة المرور">
+                                            title="{{ _('إعادة تعيين كلمة المرور') }}">
                                         <i class="fas fa-lock"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-{{ 'danger' if user.is_active else 'success' }}" 
                                             onclick="toggleUserStatus('{{ user.id }}')"
-                                            title="{{ 'تعطيل' if user.is_active else 'تفعيل' }} المستخدم">
+                                            title="{{ _('تعطيل') if user.is_active else _('تفعيل') }} {{ _('المستخدم') }}">
                                         <i class="fas fa-{{ 'ban' if user.is_active else 'check' }}"></i>
                                     </button>
                                 </div>
@@ -242,13 +242,13 @@
     <div class="card border-0 shadow-sm mb-4" id="scripts">
         <div class="card-header bg-transparent">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">إدارة السكربتات</h5>
+                <h5 class="mb-0">{{ _('إدارة السكربتات') }}</h5>
                 <div class="btn-group">
                     <a href="{{ url_for('main.script_control') }}" class="btn btn-success">
-                        <i class="fas fa-robot me-2"></i>سكربت ذكي
+                        <i class="fas fa-robot me-2"></i>{{ _('سكربت ذكي') }}
                     </a>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScriptModal">
-                        <i class="fas fa-plus me-2"></i>إضافة سكربت جديد
+                        <i class="fas fa-plus me-2"></i>{{ _('إضافة سكربت جديد') }}
                     </button>
                 </div>
             </div>
@@ -258,15 +258,15 @@
             <div class="row mb-4">
                 <div class="col-md-4">
                     <div class="search-box">
-                        <input type="text" class="form-control" id="searchInput" placeholder="ابحث عن سكربت...">
+                        <input type="text" class="form-control" id="searchInput" placeholder="{{ _('ابحث عن سكربت...') }}">
                     </div>
                 </div>
                 <div class="col-md-8">
                     <div class="d-flex justify-content-end gap-2">
-                        <button class="btn btn-outline-primary category-filter active" data-category="all">الكل</button>
-                        <button class="btn btn-outline-primary category-filter" data-category="search">البحث</button>
-                        <button class="btn btn-outline-primary category-filter" data-category="analysis">التحليل</button>
-                        <button class="btn btn-outline-primary category-filter" data-category="automation">الأتمتة</button>
+                        <button class="btn btn-outline-primary category-filter active" data-category="all">{{ _('الكل') }}</button>
+                        <button class="btn btn-outline-primary category-filter" data-category="search">{{ _('البحث') }}</button>
+                        <button class="btn btn-outline-primary category-filter" data-category="analysis">{{ _('التحليل') }}</button>
+                        <button class="btn btn-outline-primary category-filter" data-category="automation">{{ _('الأتمتة') }}</button>
                     </div>
                 </div>
             </div>
@@ -280,49 +280,49 @@
                             <div class="script-icon mb-2">
                                 <i class="fas {{ script.icon|default('fa-code') }} fa-2x"></i>
                             </div>
-                            <h5 class="card-title mb-0">{{ script.name }}</h5>
+                            <h5 class="card-title mb-0">{{ script.name }}</h5> {# Assuming script.name is already in desired language or not translatable here #}
                             {% if script.is_featured %}
-                            <span class="badge bg-warning position-absolute top-0 end-0 mt-2 me-2">مميز</span>
+                            <span class="badge bg-warning position-absolute top-0 end-0 mt-2 me-2">{{ _('مميز') }}</span>
                             {% endif %}
                         </div>
                         <div class="card-body">
-                            <p class="script-description">{{ script.description }}</p>
+                            <p class="script-description">{{ script.description }}</p> {# Assuming script.description is already in desired language or not translatable here #}
                             <div class="script-features mb-3">
-                                <div class="mb-2"><i class="fas fa-check-circle text-success"></i> تحديثات مجانية</div>
-                                <div class="mb-2"><i class="fas fa-headset text-info"></i> دعم فني</div>
-                                <div><i class="fas fa-shield-alt text-primary"></i> حماية متكاملة</div>
+                                <div class="mb-2"><i class="fas fa-check-circle text-success"></i> {{ _('تحديثات مجانية') }}</div>
+                                <div class="mb-2"><i class="fas fa-headset text-info"></i> {{ _('دعم فني') }}</div>
+                                <div><i class="fas fa-shield-alt text-primary"></i> {{ _('حماية متكاملة') }}</div>
                             </div>
                             <div class="script-stats">
                                 <div class="row text-center">
                                     <div class="col">
-                                        <h6>المستخدمين</h6>
+                                        <h6>{{ _('المستخدمين') }}</h6>
                                         <span class="h4">{{ script.users_count|default(0) }}</span>
                                     </div>
                                     <div class="col">
-                                        <h6>التنفيذات</h6>
+                                        <h6>{{ _('التنفيذات') }}</h6>
                                         <span class="h4">{{ script.executions_count|default(0) }}</span>
                                     </div>
                                     <div class="col">
-                                        <h6>السعر</h6>
-                                        <span class="h4 text-success">{{ "%.0f"|format(script.price) }}</span>
+                                        <h6>{{ _('السعر') }}</h6>
+                                        <span class="h4 text-success">{{ "%.0f"|format(script.price) }}</span> {# Price formatting might need locale-specific handling later #}
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="card-footer bg-transparent border-0">
                             <div class="btn-group w-100">
-                                <button class="btn btn-primary" onclick="editScript('{{ script.id }}')" title="تعديل السكربت">
+                                <button class="btn btn-primary" onclick="editScript('{{ script.id }}')" title="{{ _('تعديل السكربت') }}">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-info" onclick="previewScript('{{ script.id }}')" title="معاينة السكربت">
+                                <button class="btn btn-info" onclick="previewScript('{{ script.id }}')" title="{{ _('معاينة السكربت') }}">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button class="btn btn-warning" onclick="testScript('{{ script.id }}')" title="اختبار السكربت">
+                                <button class="btn btn-warning" onclick="testScript('{{ script.id }}')" title="{{ _('اختبار السكربت') }}">
                                     <i class="fas fa-vial"></i>
                                 </button>
                                 <button class="btn btn-{{ 'danger' if script.is_active else 'success' }}" 
                                         onclick="toggleScriptStatus('{{ script.id }}')"
-                                        title="{{ 'تعطيل' if script.is_active else 'تفعيل' }} السكربت">
+                                        title="{{ _('تعطيل') if script.is_active else _('تفعيل') }} {{ _('السكربت') }}">
                                     <i class="fas fa-{{ 'ban' if script.is_active else 'check' }}"></i>
                                 </button>
                             </div>
@@ -341,31 +341,31 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">إضافة مستخدم جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title">{{ _('إضافة مستخدم جديد') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
             </div>
             <form id="addUserForm">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">اسم المستخدم</label>
-                        <input type="text" class="form-control" name="username" required>
+                        <label class="form-label">{{ _('اسم المستخدم') }}</label>
+                        <input type="text" class="form-control" name="username" placeholder="{{ _('ادخل اسم المستخدم') }}" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">البريد الإلكتروني</label>
-                        <input type="email" class="form-control" name="email" required>
+                        <label class="form-label">{{ _('البريد الإلكتروني') }}</label>
+                        <input type="email" class="form-control" name="email" placeholder="{{ _('ادخل البريد الإلكتروني') }}" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">الاسم الكامل</label>
-                        <input type="text" class="form-control" name="full_name" required>
+                        <label class="form-label">{{ _('الاسم الكامل') }}</label>
+                        <input type="text" class="form-control" name="full_name" placeholder="{{ _('ادخل الاسم الكامل') }}" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">رقم الجوال</label>
-                        <input type="tel" class="form-control" name="phone" required>
+                        <label class="form-label">{{ _('رقم الجوال') }}</label>
+                        <input type="tel" class="form-control" name="phone" placeholder="{{ _('ادخل رقم الجوال') }}" required>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">إضافة المستخدم</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('إضافة المستخدم') }}</button>
                 </div>
             </form>
         </div>
@@ -377,28 +377,28 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">تعديل بيانات المستخدم</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title">{{ _('تعديل بيانات المستخدم') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
             </div>
             <form id="editUserForm">
                 <input type="hidden" id="editUserId">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">الاسم الكامل</label>
+                        <label class="form-label">{{ _('الاسم الكامل') }}</label>
                         <input type="text" class="form-control" id="editUserFullName" name="full_name" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">البريد الإلكتروني</label>
+                        <label class="form-label">{{ _('البريد الإلكتروني') }}</label>
                         <input type="email" class="form-control" id="editUserEmail" name="email" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">رقم الجوال</label>
+                        <label class="form-label">{{ _('رقم الجوال') }}</label>
                         <input type="tel" class="form-control" id="editUserPhone" name="phone" required>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('حفظ التغييرات') }}</button>
                 </div>
             </form>
         </div>
@@ -410,47 +410,47 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">إضافة سكربت جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title">{{ _('إضافة سكربت جديد') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
             </div>
             <form id="addScriptForm">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">اسم السكربت</label>
-                        <input type="text" class="form-control" name="name" required>
+                        <label class="form-label">{{ _('اسم السكربت') }}</label>
+                        <input type="text" class="form-control" name="name" placeholder="{{ _('اسم فريد للسكربت') }}" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">الوصف</label>
-                        <textarea class="form-control" name="description" rows="3" required></textarea>
+                        <label class="form-label">{{ _('الوصف') }}</label>
+                        <textarea class="form-control" name="description" rows="3" placeholder="{{ _('شرح موجز لوظيفة السكربت') }}" required></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">الفئة</label>
+                        <label class="form-label">{{ _('الفئة') }}</label>
                         <select class="form-select" name="category" required>
-                            <option value="search">البحث</option>
-                            <option value="analysis">التحليل</option>
-                            <option value="automation">الأتمتة</option>
+                            <option value="search">{{ _('البحث') }}</option>
+                            <option value="analysis">{{ _('التحليل') }}</option>
+                            <option value="automation">{{ _('الأتمتة') }}</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">السعر</label>
-                        <input type="number" class="form-control" name="price" required>
+                        <label class="form-label">{{ _('السعر') }}</label>
+                        <input type="number" class="form-control" name="price" placeholder="0.00" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">الكود</label>
-                        <textarea class="form-control" name="code" rows="10" dir="ltr"></textarea>
+                        <label class="form-label">{{ _('الكود') }}</label>
+                        <textarea class="form-control" name="code" rows="10" dir="ltr" placeholder="{{ _('ضع كود السكربت هنا') }}"></textarea>
                     </div>
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="is_featured" id="isFeatureCheck">
                             <label class="form-check-label" for="isFeatureCheck">
-                                سكربت مميز
+                                {{ _('سكربت مميز') }}
                             </label>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">إضافة السكربت</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('إضافة السكربت') }}</button>
                 </div>
             </form>
         </div>
@@ -462,48 +462,48 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">تعديل السكربت</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title">{{ _('تعديل السكربت') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
             </div>
             <form id="editScriptForm">
                 <input type="hidden" id="editScriptId">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">اسم السكربت</label>
+                        <label class="form-label">{{ _('اسم السكربت') }}</label>
                         <input type="text" class="form-control" id="editScriptName" name="name" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">الوصف</label>
+                        <label class="form-label">{{ _('الوصف') }}</label>
                         <textarea class="form-control" id="editScriptDescription" name="description" rows="3" required></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">الفئة</label>
+                        <label class="form-label">{{ _('الفئة') }}</label>
                         <select class="form-select" id="editScriptCategory" name="category" required>
-                            <option value="search">البحث</option>
-                            <option value="analysis">التحليل</option>
-                            <option value="automation">الأتمتة</option>
+                            <option value="search">{{ _('البحث') }}</option>
+                            <option value="analysis">{{ _('التحليل') }}</option>
+                            <option value="automation">{{ _('الأتمتة') }}</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">السعر</label>
+                        <label class="form-label">{{ _('السعر') }}</label>
                         <input type="number" class="form-control" id="editScriptPrice" name="price" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">الكود</label>
+                        <label class="form-label">{{ _('الكود') }}</label>
                         <textarea class="form-control" id="editScriptCode" name="code" rows="10" dir="ltr"></textarea>
                     </div>
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="is_featured" id="editIsFeatureCheck">
                             <label class="form-check-label" for="editIsFeatureCheck">
-                                سكربت مميز
+                                {{ _('سكربت مميز') }}
                             </label>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('حفظ التغييرات') }}</button>
                 </div>
             </form>
         </div>
@@ -515,21 +515,21 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">معاينة السكربت</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title">{{ _('معاينة السكربت') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
             </div>
             <div class="modal-body">
-                <h6>اسم السكربت</h6>
+                <h6>{{ _('اسم السكربت') }}</h6>
                 <p id="previewScriptName"></p>
                 
-                <h6>الوصف</h6>
+                <h6>{{ _('الوصف') }}</h6>
                 <p id="previewScriptDescription"></p>
                 
-                <h6>الكود</h6>
+                <h6>{{ _('الكود') }}</h6>
                 <pre><code id="previewScriptCode" class="language-python"></code></pre>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('إغلاق') }}</button>
             </div>
         </div>
     </div>
@@ -556,12 +556,12 @@ function editUser(userId) {
             const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
             modal.show();
         } else {
-            alert(data.error || 'حدث خطأ أثناء تحميل بيانات المستخدم');
+            alert(data.error || _('حدث خطأ أثناء تحميل بيانات المستخدم'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء تحميل بيانات المستخدم');
+        alert(_('حدث خطأ أثناء تحميل بيانات المستخدم'));
     });
 }
 
@@ -575,20 +575,20 @@ function assignScripts(userId) {
         if (data.success) {
             // عرض مودال تخصيص السكربتات
             // يمكن إضافة المنطق هنا لاحقاً
-            alert('سيتم إضافة هذه الميزة قريباً');
+            alert(_('سيتم إضافة هذه الميزة قريباً'));
         } else {
-            alert(data.error || 'حدث خطأ أثناء تحميل السكربتات');
+            alert(data.error || _('حدث خطأ أثناء تحميل السكربتات'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء تحميل السكربتات');
+        alert(_('حدث خطأ أثناء تحميل السكربتات'));
     });
 }
 
 // دالة لإعادة تعيين كلمة المرور
 function resetPassword(userId) {
-    if (!confirm('هل أنت متأكد من إعادة تعيين كلمة المرور؟ سيتم إرسال كلمة المرور الجديدة بالبريد.')) {
+    if (!confirm(_('هل أنت متأكد من إعادة تعيين كلمة المرور؟ سيتم إرسال كلمة المرور الجديدة بالبريد.'))) {
         return;
     }
     
@@ -601,20 +601,20 @@ function resetPassword(userId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(data.message);
+            alert(data.message); // Assuming message from backend is already translated or is a key
         } else {
-            alert(data.error || 'حدث خطأ أثناء إعادة تعيين كلمة المرور');
+            alert(data.error || _('حدث خطأ أثناء إعادة تعيين كلمة المرور'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء إعادة تعيين كلمة المرور');
+        alert(_('حدث خطأ أثناء إعادة تعيين كلمة المرور'));
     });
 }
 
 // دالة لتفعيل/تعطيل المستخدم
 function toggleUserStatus(userId) {
-    if (!confirm('هل أنت متأكد من تغيير حالة المستخدم؟')) {
+    if (!confirm(_('هل أنت متأكد من تغيير حالة المستخدم؟'))) {
         return;
     }
     
@@ -634,20 +634,20 @@ function toggleUserStatus(userId) {
             
             // تحديث شارة الحالة
             statusBadge.className = `badge bg-${data.new_status ? 'success' : 'danger'}`;
-            statusBadge.textContent = data.new_status ? 'مفعل' : 'معطل';
+            statusBadge.textContent = data.new_status ? _('مفعل') : _('معطل');
             
             // تحديث زر التبديل
             toggleButton.className = `btn btn-sm btn-${data.new_status ? 'danger' : 'success'}`;
             toggleButton.querySelector('i').className = `fas fa-${data.new_status ? 'ban' : 'check'}`;
             
-            alert(data.message);
+            alert(data.message); // Assuming message from backend is translated or a key
         } else {
-            alert(data.error || 'حدث خطأ أثناء تغيير حالة المستخدم');
+            alert(data.error || _('حدث خطأ أثناء تغيير حالة المستخدم'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء تغيير حالة المستخدم');
+        alert(_('حدث خطأ أثناء تغيير حالة المستخدم'));
     });
 }
 
@@ -668,12 +668,12 @@ function editScript(scriptId) {
             const modal = new bootstrap.Modal(document.getElementById('editScriptModal'));
             modal.show();
         } else {
-            alert(data.error || 'حدث خطأ أثناء تحميل بيانات السكربت');
+            alert(data.error || _('حدث خطأ أثناء تحميل بيانات السكربت'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء تحميل بيانات السكربت');
+        alert(_('حدث خطأ أثناء تحميل بيانات السكربت'));
     });
 }
 
@@ -684,7 +684,7 @@ function previewScript(scriptId) {
     .then(data => {
         if (data.success) {
             // تعبئة المودال بالبيانات
-            document.getElementById('previewScriptName').textContent = data.script.name;
+            document.getElementById('previewScriptName').textContent = data.script.name; // Name/desc/code might not be translatable if they are data
             document.getElementById('previewScriptDescription').textContent = data.script.description;
             document.getElementById('previewScriptCode').textContent = data.script.code;
             
@@ -692,12 +692,12 @@ function previewScript(scriptId) {
             const modal = new bootstrap.Modal(document.getElementById('previewScriptModal'));
             modal.show();
         } else {
-            alert(data.error || 'حدث خطأ أثناء تحميل بيانات السكربت');
+            alert(data.error || _('حدث خطأ أثناء تحميل بيانات السكربت'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء تحميل بيانات السكربت');
+        alert(_('حدث خطأ أثناء تحميل بيانات السكربت'));
     });
 }
 
@@ -712,20 +712,20 @@ function testScript(scriptId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(data.message);
+            alert(data.message); // Assuming message from backend is translated or a key
         } else {
-            alert(data.error || 'حدث خطأ أثناء اختبار السكربت');
+            alert(data.error || _('حدث خطأ أثناء اختبار السكربت'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء اختبار السكربت');
+        alert(_('حدث خطأ أثناء اختبار السكربت'));
     });
 }
 
 // دالة لتفعيل/تعطيل السكربت
 function toggleScriptStatus(scriptId) {
-    if (!confirm('هل أنت متأكد من تغيير حالة السكربت؟')) {
+    if (!confirm(_('هل أنت متأكد من تغيير حالة السكربت؟'))) {
         return;
     }
     
@@ -745,20 +745,20 @@ function toggleScriptStatus(scriptId) {
             
             // تحديث شارة الحالة
             statusBadge.className = `badge bg-${data.new_status ? 'success' : 'danger'}`;
-            statusBadge.textContent = data.new_status ? 'نشط' : 'معطل';
+            statusBadge.textContent = data.new_status ? _('نشط') : _('معطل');
             
             // تحديث زر التبديل
             toggleButton.className = `btn btn-sm btn-${data.new_status ? 'danger' : 'success'}`;
             toggleButton.querySelector('i').className = `fas fa-${data.new_status ? 'ban' : 'check'}`;
             
-            alert(data.message);
+            alert(data.message); // Assuming message from backend is translated or a key
         } else {
-            alert(data.error || 'حدث خطأ أثناء تغيير حالة السكربت');
+            alert(data.error || _('حدث خطأ أثناء تغيير حالة السكربت'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء تغيير حالة السكربت');
+        alert(_('حدث خطأ أثناء تغيير حالة السكربت'));
     });
 }
 
@@ -780,17 +780,17 @@ document.getElementById('addUserForm').addEventListener('submit', function(e) {
             modal.hide();
             
             // عرض رسالة النجاح
-            alert(data.message);
+            alert(data.message); // Assuming message from backend is translated or a key
             
             // إعادة تحميل الصفحة
             location.reload();
         } else {
-            alert(data.error || 'حدث خطأ أثناء إضافة المستخدم');
+            alert(data.error || _('حدث خطأ أثناء إضافة المستخدم'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء إضافة المستخدم');
+        alert(_('حدث خطأ أثناء إضافة المستخدم'));
     });
 });
 
@@ -813,17 +813,17 @@ document.getElementById('editUserForm').addEventListener('submit', function(e) {
             modal.hide();
             
             // عرض رسالة النجاح
-            alert(data.message);
+            alert(data.message); // Assuming message from backend is translated or a key
             
             // إعادة تحميل الصفحة
             location.reload();
         } else {
-            alert(data.error || 'حدث خطأ أثناء تحديث بيانات المستخدم');
+            alert(data.error || _('حدث خطأ أثناء تحديث بيانات المستخدم'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء تحديث بيانات المستخدم');
+        alert(_('حدث خطأ أثناء تحديث بيانات المستخدم'));
     });
 });
 
@@ -846,17 +846,17 @@ document.getElementById('editScriptForm').addEventListener('submit', function(e)
             modal.hide();
             
             // عرض رسالة النجاح
-            alert(data.message);
+            alert(data.message); // Assuming message from backend is translated or a key
             
             // إعادة تحميل الصفحة
             location.reload();
         } else {
-            alert(data.error || 'حدث خطأ أثناء تحديث السكربت');
+            alert(data.error || _('حدث خطأ أثناء تحديث السكربت'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء تحديث السكربت');
+        alert(_('حدث خطأ أثناء تحديث السكربت'));
     });
 });
 </script>

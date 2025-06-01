@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="{{ get_locale()[:2] if get_locale else 'ar' }}" dir="{{ 'rtl' if (get_locale()[:2] if get_locale else 'ar') == 'ar' else 'ltr' }}">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ _('توصيل المنتج') }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .header { background-color: #007bff; color: white; padding: 10px 20px; text-align: center; border-top-left-radius: 8px; border-top-right-radius: 8px; }
+        .content { padding: 20px; }
+        .footer { text-align: center; font-size: 0.9em; color: #777; margin-top: 20px; padding: 10px; }
+        a { color: #007bff; }
+        .button { display: inline-block; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>{{ _('طلبك مكتمل!') }}</h2>
+        </div>
+        <div class="content">
+            <p>{{ _('مرحباً') }} {{ user_name }},</p>
+            <p>
+                {{ _('شكراً لك على شرائك المنتج:') }} <strong>"{{ product_name }}"</strong> ({{ _(product_type) }}).
+            </p>
+            <p>
+                {{ _('يمكنك الوصول إلى منتجك من خلال المعلومات التالية:') }}
+            </p>
+            <div>
+                <!-- delivery_info could be HTML if it's a link, or plain text -->
+                {{ delivery_info|safe if product_type == 'script_link' else delivery_info }}
+            </div>
+            <p style="text-align: center; margin-top: 30px;">
+                {% if product_type == 'script_link' %}
+                    <a href="{{ delivery_info }}" class="button">{{ _('الوصول إلى السكربتات') }}</a>
+                {% elif product_type == 'download_link' %}
+                     <a href="{{ delivery_info }}" class="button">{{ _('تحميل المنتج') }}</a>
+                {% endif %}
+            </p>
+            <p>{{ _('إذا كان لديك أي أسئلة، لا تتردد في التواصل معنا.') }}</p>
+            <p>{{ _('شكراً لك،') }}<br>{{ _('فريق منصة إتمام') }}</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{ now.year if now else '2023' }} {{ _('منصة إتمام') }}. {{ _('جميع الحقوق محفوظة.') }}</p>
+        </div>
+    </div>
+</body>
+</html>

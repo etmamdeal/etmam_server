@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta
 from flask_login import UserMixin
-from flask_sqlalchemy import SQLAlchemy
+from .extensions import db # Import db from extensions.py
 from sqlalchemy import text
 import json
 import jwt
 from flask import current_app
 from werkzeug.security import generate_password_hash
 
-db = SQLAlchemy()
+# db = SQLAlchemy() # Remove this line
 
 class Permission:
     # تعريف الصلاحيات المتاحة
@@ -69,7 +69,7 @@ class UserScript(db.Model):
     script_id = db.Column(db.Integer, db.ForeignKey('scripts.id', ondelete='CASCADE'), primary_key=True)
     config_data = db.Column(db.Text, default='{}')
     assigned_at = db.Column(db.DateTime, default=datetime.now)
-    assigned_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
+    assigned_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True) # Made nullable
     
     # العلاقات
     user = db.relationship('User', foreign_keys=[user_id], overlaps="scripts,users")
@@ -93,6 +93,9 @@ class User(UserMixin, db.Model):
     @property
     def is_admin(self):
         """التحقق من كون المستخدم سوبر أدمن"""
+        # Currently, 'admin' is an alias for 'super_admin'.
+        # For a distinct admin role, Role.ADMIN would need to be defined
+        # and this property changed to check for self.role == Role.ADMIN.
         return self.role == Role.SUPER_ADMIN
 
     @property

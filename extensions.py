@@ -1,10 +1,14 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
+from flask_socketio import SocketIO # Import SocketIO
+from flask_mail import Mail # Import Mail
 
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
+socketio = SocketIO() # Add socketio instance
+mail = Mail() # Add mail instance
 
 # تكوين مدير تسجيل الدخول
 login_manager.login_view = 'client_login'  # صفحة تسجيل الدخول الافتراضية

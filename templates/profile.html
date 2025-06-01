@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('الملف الشخصي') }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">{{ _('الملف الشخصي') }}</h4>
+                </div>
+                <div class="card-body p-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }} {# Assumed translated in Python #}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ _('Close') }}"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <h5 class="mb-3">{{ _('المعلومات الشخصية') }}</h5>
+                    <form method="POST" action="{{ url_for('main.profile') }}"> {# Assuming a POST endpoint for profile updates #}
+                        {{ form.csrf_token if form else '' }} {# Add CSRF token if using Flask-WTF #}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="full_name" class="form-label">{{ _('الاسم الكامل') }}</label>
+                                <input type="text" class="form-control" id="full_name" name="full_name" value="{{ current_user.full_name }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="username" class="form-label">{{ _('اسم المستخدم') }}</label>
+                                <input type="text" class="form-control" id="username" name="username" value="{{ current_user.username }}" readonly disabled>
+                                <small class="form-text text-muted">{{ _('لا يمكن تغيير اسم المستخدم.') }}</small>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">{{ _('البريد الإلكتروني') }}</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">{{ _('رقم الجوال') }}</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ current_user.phone }}">
+                        </div>
+                        <button type="submit" name="update_details" class="btn btn-primary">{{ _('تحديث المعلومات') }}</button>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <h5 class="mb-3">{{ _('تغيير كلمة المرور') }}</h5>
+                    <form method="POST" action="{{ url_for('main.profile') }}"> {# Assuming same endpoint, different submit button name or specific route #}
+                        {{ form.csrf_token if form else '' }} {# Add CSRF token if using Flask-WTF #}
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">{{ _('كلمة المرور الحالية') }}</label>
+                            <input type="password" class="form-control" id="current_password" name="current_password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">{{ _('كلمة المرور الجديدة') }}</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password" required minlength="6">
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirm_new_password" class="form-label">{{ _('تأكيد كلمة المرور الجديدة') }}</label>
+                            <input type="password" class="form-control" id="confirm_new_password" name="confirm_new_password" required minlength="6">
+                        </div>
+                        <button type="submit" name="change_password" class="btn btn-warning">{{ _('تغيير كلمة المرور') }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

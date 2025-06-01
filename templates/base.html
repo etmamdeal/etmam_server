@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ get_locale()[:2] if get_locale else 'ar' }}" dir="{{ 'rtl' if (get_locale()[:2] if get_locale else 'ar') == 'ar' else 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}منصة إتمام{% endblock %}</title>
+    <title>{% block title %}{{ _('منصة إتمام') }}{% endblock %}</title>
     
     <!-- Bootstrap RTL -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
@@ -21,7 +21,7 @@
     <nav class="navbar navbar-expand-lg">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('main.index') }}">
-                <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="إتمام" height="40">
+                <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="{{ _('إتمام') }}" height="40">
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -32,12 +32,12 @@
                 <ul class="navbar-nav mb-2 mb-lg-0">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.products') }}">
-                            <i class="fas fa-store"></i> المنتجات الرقمية
+                            <i class="fas fa-store"></i> {{ _('المنتجات الرقمية') }}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.contact_us') }}">
-                            <i class="fas fa-envelope"></i> تواصل معنا
+                            <i class="fas fa-envelope"></i> {{ _('تواصل معنا') }}
                         </a>
                     </li>
                 </ul>
@@ -47,40 +47,42 @@
                             {% if current_user.is_super_admin %}
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ url_for('main.super_admin_control') }}">
-                                        <i class="fas fa-home"></i> الرئيسية
+                                        <i class="fas fa-home"></i> {{ _('الرئيسية') }}
                                     </a>
                                 </li>
+                            {# This elif current_user.is_admin block is currently redundant as User.is_admin is an alias for User.is_super_admin.
+                               It would become relevant if a separate Admin role (non-super) is implemented in models.py and User.is_admin is updated. #}
                             {% elif current_user.is_admin %}
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ url_for('main.admin_dashboard') }}">
-                                        <i class="fas fa-home"></i> الرئيسية
+                                        <i class="fas fa-home"></i> {{ _('الرئيسية') }}
                                     </a>
                                 </li>
                             {% else %}
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ url_for('main.dashboard') }}">
-                                        <i class="fas fa-home"></i> الرئيسية
+                                        <i class="fas fa-home"></i> {{ _('الرئيسية') }}
                                     </a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ url_for('main.my_scripts') }}">
-                                        <i class="fas fa-code"></i> سكربتاتي
+                                        <i class="fas fa-code"></i> {{ _('سكربتاتي') }}
                                     </a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ url_for('main.script_logs') }}">
-                                        <i class="fas fa-history"></i> السجل
+                                        <i class="fas fa-history"></i> {{ _('السجل') }}
                                     </a>
                                 </li>
                             {% endif %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('main.profile') }}">
-                                    <i class="fas fa-user"></i> الملف الشخصي
+                                    <i class="fas fa-user"></i> {{ _('الملف الشخصي') }}
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('main.logout') }}">
-                                    <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                                    <i class="fas fa-sign-out-alt"></i> {{ _('تسجيل الخروج') }}
                                 </a>
                             </li>
                         </ul>
@@ -88,17 +90,17 @@
                         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                             <li class="nav-item">
                                 <a class="nav-link btn btn-outline-primary mx-2" href="{{ url_for('main.client_login') }}">
-                                    <i class="fas fa-sign-in-alt"></i> دخول العميل
+                                    <i class="fas fa-sign-in-alt"></i> {{ _('دخول العميل') }}
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link btn btn-primary text-white mx-2" href="{{ url_for('main.register') }}">
-                                    <i class="fas fa-user-plus"></i> تسجيل جديد
+                                    <i class="fas fa-user-plus"></i> {{ _('تسجيل جديد') }}
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link btn btn-outline-dark mx-2" href="{{ url_for('main.admin_login') }}">
-                                    <i class="fas fa-user-shield"></i> دخول المشرف
+                                    <i class="fas fa-user-shield"></i> {{ _('دخول المشرف') }}
                                 </a>
                             </li>
                         </ul>
@@ -127,7 +129,7 @@
     <!-- Footer -->
     <footer class="bg-dark text-light py-4 mt-5">
         <div class="container text-center">
-            <p>جميع الحقوق محفوظة &copy; {{ now.year }} منصة إتمام</p>
+            <p>{{ _('جميع الحقوق محفوظة') }} &copy; {{ now.year }} {{ _('منصة إتمام') }}</p>
             <div class="mt-2">
                 <a href="#" class="text-light mx-2"><i class="fab fa-twitter"></i></a>
                 <a href="#" class="text-light mx-2"><i class="fab fa-linkedin"></i></a>

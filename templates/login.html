@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}تسجيل الدخول - منصة إتمام{% endblock %}
+{% block title %}{{ _('تسجيل الدخول') }} - {{ _('منصة إتمام') }}{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -9,12 +9,13 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
                     <div class="text-center mb-4">
-                        <h2 class="mb-3">تسجيل الدخول</h2>
-                        <p class="text-muted">مرحباً بك في منصة إتمام</p>
+                        <h2 class="mb-3">{{ _('تسجيل الدخول') }}</h2>
+                        <p class="text-muted">{{ _('مرحباً بك في منصة إتمام') }}</p>
                     </div>
 
                     <form method="POST" action="{{ url_for('main.login') }}">
                         <!-- رسائل الخطأ -->
+                        {# Flash messages are already translated in routes.py, so no need to wrap 'message' here #}
                         {% with messages = get_flashed_messages(with_categories=true) %}
                             {% if messages %}
                                 {% for category, message in messages %}
@@ -26,19 +27,19 @@
                         {% endwith %}
 
                         <div class="mb-3">
-                            <label for="username" class="form-label">اسم المستخدم</label>
-                            <input type="text" class="form-control" id="username" name="username" required>
+                            <label for="username" class="form-label">{{ _('اسم المستخدم') }}</label>
+                            <input type="text" class="form-control" id="username" name="username" placeholder="{{ _('ادخل اسم المستخدم') }}" required>
                         </div>
 
                         <div class="mb-4">
-                            <label for="password" class="form-label">كلمة المرور</label>
-                            <input type="password" class="form-control" id="password" name="password" required>
+                            <label for="password" class="form-label">{{ _('كلمة المرور') }}</label>
+                            <input type="password" class="form-control" id="password" name="password" placeholder="{{ _('ادخل كلمة المرور') }}" required>
                         </div>
 
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-sign-in-alt me-2"></i>
-                                تسجيل الدخول
+                                {{ _('تسجيل الدخول') }}
                             </button>
                         </div>
                     </form>

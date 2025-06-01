@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}تسجيل دخول المشرف{% endblock %}
+{% block title %}{{ _('تسجيل دخول المشرف') }}{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -8,32 +8,33 @@
         <div class="col-md-6">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-primary text-white py-3">
-                    <h4 class="mb-0 text-center">تسجيل دخول المشرف</h4>
+                    <h4 class="mb-0 text-center">{{ _('تسجيل دخول المشرف') }}</h4>
                 </div>
                 <div class="card-body p-4">
-                    {% with messages = get_flashed_messages() %}
+                    {# Flash messages assumed translated in Python files #}
+                    {% with messages = get_flashed_messages(with_categories=true) %} {# Added with_categories=true #}
                         {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-danger">{{ message }}</div>
+                            {% for category, message in messages %} {# Added category #}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
                             {% endfor %}
                         {% endif %}
                     {% endwith %}
 
                     <form method="POST" class="needs-validation" novalidate>
                         <div class="mb-4">
-                            <label class="form-label">اسم المستخدم</label>
+                            <label class="form-label">{{ _('اسم المستخدم') }}</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                <input type="text" class="form-control" name="username" required>
+                                <input type="text" class="form-control" name="username" placeholder="{{ _('ادخل اسم المستخدم') }}" required>
                             </div>
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label">كلمة المرور</label>
+                            <label class="form-label">{{ _('كلمة المرور') }}</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                <input type="password" class="form-control" name="password" id="password" required>
-                                <button class="btn btn-outline-secondary" type="button" id="togglePassword" style="border-right: none;">
+                                <input type="password" class="form-control" name="password" id="password" placeholder="{{ _('ادخل كلمة المرور') }}" required>
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword" style="border-right: none;" aria-label="{{ _('Toggle password visibility') }}">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
@@ -41,20 +42,20 @@
 
                         <div class="mb-4">
                             <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-sign-in-alt me-2"></i>تسجيل الدخول
+                                <i class="fas fa-sign-in-alt me-2"></i>{{ _('تسجيل الدخول') }}
                             </button>
                         </div>
 
                         <div class="text-center mb-4">
                             <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-decoration-none">
-                                نسيت كلمة المرور؟
+                                {{ _('نسيت كلمة المرور؟') }}
                             </a>
                         </div>
 
                         <!-- تسجيل مشرف تم تعطيله -->
                         <!-- <div class="text-center">
                             <a href="#" data-bs-toggle="modal" data-bs-target="#registerAdminModal" class="btn btn-outline-primary">
-                                <i class="fas fa-user-plus me-2"></i>إنشاء حساب مشرف جديد
+                                <i class="fas fa-user-plus me-2"></i>{{ _('إنشاء حساب مشرف جديد') }}
                             </a>
                         </div> -->
                     </form>
@@ -65,24 +66,24 @@
 </div>
 
 <!-- Modal نسيت كلمة المرور -->
-<div class="modal fade" id="forgotPasswordModal" tabindex="-1">
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">استعادة كلمة المرور</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="forgotPasswordModalLabel">{{ _('استعادة كلمة المرور') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
             </div>
-            <form action="{{ url_for('main.reset_password_request') }}" method="POST">
+            <form action="{{ url_for('main.reset_password_request') }}" method="POST"> {# Assuming this route exists #}
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">البريد الإلكتروني</label>
-                        <input type="email" class="form-control" name="email" required>
-                        <div class="form-text">سيتم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني</div>
+                        <label class="form-label">{{ _('البريد الإلكتروني') }}</label>
+                        <input type="email" class="form-control" name="email" placeholder="{{ _('ادخل بريدك الإلكتروني المسجل') }}" required>
+                        <div class="form-text">{{ _('سيتم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني') }}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">إرسال رابط الاستعادة</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('إرسال رابط الاستعادة') }}</button>
                 </div>
             </form>
         </div>
@@ -91,21 +92,21 @@
 
 <!-- تسجيل مشرف تم تعطيله -->
 <!-- Modal إنشاء حساب مشرف -->
-<!-- <div class="modal fade" id="registerAdminModal" tabindex="-1">
+<!-- <div class="modal fade" id="registerAdminModal" tabindex="-1" aria-labelledby="registerAdminModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">إنشاء حساب مشرف جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="registerAdminModalLabel">{{ _('إنشاء حساب مشرف جديد') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
             </div>
             <form>
                 <div class="modal-body">
                     <div class="alert alert-warning">
-                        تم تعطيل تسجيل المشرفين الجدد. يرجى التواصل مع السوبر أدمن.
+                        {{ _('تم تعطيل تسجيل المشرفين الجدد. يرجى التواصل مع السوبر أدمن.') }}
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('إغلاق') }}</button>
                 </div>
             </form>
         </div>

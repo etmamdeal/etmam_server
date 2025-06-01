@@ -1,56 +1,81 @@
-/* تعريف الخط */
-@font-face {
-    font-family: 'Questv1';
-    src: url('../fonts/Questv1-Regular.otf') format('opentype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-
-/* إعدادات عامة */
+/* Brand Color Variables */
 :root {
-    --primary-color: #2b8c31;
-    --secondary-color: #0077cc;
-    --background-color: #fdf4e3;
-    --text-color: #333;
+    /* New Brand Colors */
+    --brand-beige: #F5F5DC;
+    --brand-green: #2E8B57; /* SeaGreen chosen for example */
+    --brand-blue: #4682B4;  /* SteelBlue chosen for example */
+
+    /* Default Theme (Light Mode) using New Brand Colors */
+    --theme-bg: var(--brand-beige);
+    --theme-text: #333333; /* Dark text for light background */
+    --theme-primary-accent: var(--brand-green);
+    --theme-secondary-accent: var(--brand-blue);
+    --theme-header-footer-bg: var(--brand-green);
+    --theme-header-footer-text: white;
+    --theme-button-bg: var(--brand-blue);
+    --theme-button-text: white;
+    --theme-container-bg: white;
+    --theme-container-text: #333333;
+    --theme-card-bg: white;
+    --theme-card-header-bg: var(--brand-green);
+    --theme-card-header-text: white;
+    --theme-form-input-bg: white;
+    --theme-form-input-text: #333333;
+    --theme-form-input-border: #ddd;
+
+    /* Original color variables - can be mapped or phased out */
+    --primary-color: var(--theme-primary-accent); /* Mapping to new theme */
+    --secondary-color: var(--theme-secondary-accent); /* Mapping to new theme */
+    --background-color: var(--theme-bg); /* Mapping to new theme */
+    --text-color: var(--theme-text); /* Mapping to new theme */
     --danger-color: #dc3545;
     --success-color: #28a745;
     --warning-color: #ffc107;
     --info-color: #17a2b8;
 }
 
-/* التنسيق الأساسي */
+/* Font Face for Questv1-Regular */
+@font-face {
+    font-family: 'Questv1-Regular'; /* Specific name */
+    src: url('../fonts/Questv1-Regular.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Basic styling for the body */
 html, body {
-    font-family: 'Questv1', system-ui, -apple-system, sans-serif;
-    background-color: var(--background-color);
-    color: var(--text-color);
+    font-family: 'Questv1-Regular', system-ui, -apple-system, sans-serif; /* Using the specific font name */
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
     line-height: 1.6;
     margin: 0;
     padding: 0;
-    direction: rtl;
+    direction: rtl; /* Retaining existing direction */
+    transition: background-color 0.3s, color 0.3s;
 }
 
-/* تطبيق الخط على جميع العناصر */
+/* Apply font to all elements */
 *, *::before, *::after {
     font-family: inherit;
     box-sizing: border-box;
 }
 
-/* الهيدر والتنقل */
+/* Header and Navigation */
 .navbar {
-    background-color: var(--primary-color);
+    background-color: var(--theme-header-footer-bg);
     padding: 1rem;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .navbar-brand {
-    color: white;
+    color: var(--theme-header-footer-text);
     font-size: 1.5rem;
     font-weight: bold;
 }
 
 .nav-link {
-    color: white !important;
+    color: var(--theme-header-footer-text) !important; /* Important to override potential conflicts */
     margin: 0 0.5rem;
     transition: opacity 0.3s;
     padding: 0.5rem 1rem;
@@ -62,33 +87,45 @@ html, body {
     border-radius: 6px;
 }
 
-/* الأزرار */
+/* Buttons */
 .btn {
-    font-family: 'Questv1', sans-serif;
+    font-family: 'Questv1-Regular', sans-serif; /* Ensure font consistency */
     border-radius: 6px;
     padding: 0.5rem 1rem;
     transition: all 0.3s;
     font-weight: 500;
+    color: var(--theme-button-text);
+    background-color: var(--theme-button-bg);
+    border: 1px solid var(--theme-button-bg);
 }
 
 .btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
+    color: white; /* Typically white text for primary */
+    background-color: var(--theme-primary-accent);
+    border-color: var(--theme-primary-accent);
+}
+.btn-primary:hover {
+    opacity: 0.9;
 }
 
 .btn-secondary {
-    background-color: var(--secondary-color);
-    border-color: var(--secondary-color);
+    color: white; /* Typically white text for secondary */
+    background-color: var(--theme-secondary-accent);
+    border-color: var(--theme-secondary-accent);
+}
+.btn-secondary:hover {
+    opacity: 0.9;
 }
 
-/* البطاقات */
+
+/* Cards */
 .card {
-    background: white;
+    background: var(--theme-card-bg);
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     margin-bottom: 1.5rem;
     overflow: hidden;
-    transition: transform 0.3s;
+    transition: transform 0.3s, background-color 0.3s, color 0.3s;
 }
 
 .card:hover {
@@ -96,19 +133,21 @@ html, body {
 }
 
 .card-header {
-    background-color: var(--primary-color);
-    color: white;
+    background-color: var(--theme-card-header-bg);
+    color: var(--theme-card-header-text);
     padding: 1rem 1.5rem;
     font-weight: 500;
 }
 
 .card-body {
     padding: 1.5rem;
+    color: var(--theme-container-text); /* Text color inside card body */
 }
 
-/* الجداول */
+/* Tables */
 .table {
-    background: white;
+    background: var(--theme-container-bg); /* Tables often sit in containers */
+    color: var(--theme-container-text);
     border-radius: 8px;
     overflow: hidden;
     margin-bottom: 1.5rem;
@@ -116,7 +155,7 @@ html, body {
 }
 
 .table th {
-    background-color: var(--primary-color);
+    background-color: var(--theme-primary-accent); /* Use primary accent for table headers */
     color: white;
     font-weight: 500;
     padding: 1rem;
@@ -125,70 +164,192 @@ html, body {
 .table td {
     padding: 1rem;
     vertical-align: middle;
+    border-bottom: 1px solid var(--theme-form-input-border); /* Add subtle lines */
+}
+.table tbody tr:last-child td {
+    border-bottom: none;
 }
 
-/* النماذج */
-.form-control {
+/* Forms */
+.form-control, form input[type="text"], form input[type="email"], form input[type="password"], form input[type="number"], form input[type="file"], form textarea, form select {
     border-radius: 6px;
     padding: 0.75rem 1rem;
-    border: 1px solid #ddd;
-    transition: border-color 0.3s;
+    border: 1px solid var(--theme-form-input-border);
+    background-color: var(--theme-form-input-bg);
+    color: var(--theme-form-input-text);
+    transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+    width: 100%; /* Ensure form elements take full width */
+    box-sizing: border-box; /* Consistent box model */
 }
 
-.form-control:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(43, 140, 49, 0.25);
+.form-control:focus, form input[type="text"]:focus, form input[type="email"]:focus, form input[type="password"]:focus, form input[type="number"]:focus, form input[type="file"]:focus, form textarea:focus, form select:focus {
+    border-color: var(--theme-primary-accent);
+    box-shadow: 0 0 0 0.2rem rgba(46, 139, 87, 0.25); /* Using fixed RGB for SeaGreen for box shadow */
 }
 
-/* التنبيهات */
+/* Alerts - General structure maintained, colors can be themed */
 .alert {
     border-radius: 8px;
     padding: 1rem 1.5rem;
     margin-bottom: 1.5rem;
-    border: none;
+    border: 1px solid transparent; /* Keep border for structure */
+}
+.alert-success {
+    color: #155724; background-color: #d4edda; border-color: #c3e6cb;
+}
+.alert-danger {
+    color: #721c24; background-color: #f8d7da; border-color: #f5c6cb;
+}
+.alert-warning {
+    color: #856404; background-color: #fff3cd; border-color: #ffeeba;
+}
+.alert-info {
+    color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb;
 }
 
-/* توافق الأجهزة المحمولة */
+
+/* Footer */
+footer {
+    background-color: var(--theme-header-footer-bg);
+    color: var(--theme-header-footer-text);
+    text-align: center;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+/* Main Content Container (if a generic one is used) */
+.container {
+    width: 80%; /* Retaining existing responsiveness */
+    margin: auto;
+    overflow: hidden;
+    padding: 20px;
+    background-color: var(--theme-container-bg);
+    color: var(--theme-container-text);
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+
+/* Dark Mode Styles */
+body.dark-mode {
+    --theme-bg: #2c3e50; /* Dark Slate Blue/Gray for dark mode background */
+    --theme-text: #E0E0E0; /* Light gray for dark mode text */
+    /* Keep brand green and blue for accents, or define dark-mode specific accents if needed */
+    /* --theme-primary-accent: var(--brand-green); (already defined) */
+    /* --theme-secondary-accent: var(--brand-blue); (already defined) */
+    --theme-header-footer-bg: #1a252f; /* Darker shade for dark mode header/footer */
+    --theme-header-footer-text: #E0E0E0;
+    /* --theme-button-bg: var(--brand-blue); (already defined or choose a lighter variant) */
+    /* --theme-button-text: white; (already defined) */
+    --theme-container-bg: #34495e; /* Slightly lighter than body bg for contrast */
+    --theme-container-text: #E0E0E0;
+    --theme-card-bg: #34495e;
+    /* --theme-card-header-bg: var(--brand-green); (already defined) */
+    /* --theme-card-header-text: white; (already defined) */
+    --theme-form-input-bg: #3b4c5a;
+    --theme-form-input-text: #E0E0E0;
+    --theme-form-input-border: #555;
+}
+
+body.dark-mode .navbar {
+    box-shadow: 0 2px 4px rgba(255,255,255,0.05); /* Lighter shadow for dark mode */
+}
+
+body.dark-mode .card {
+    box-shadow: 0 4px 6px rgba(255,255,255,0.05);
+}
+body.dark-mode .table td {
+    border-bottom: 1px solid #4a5c6a;
+}
+body.dark-mode .table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+body.dark-mode .form-control:focus,
+body.dark-mode form input[type="text"]:focus,
+body.dark-mode form input[type="email"]:focus,
+body.dark-mode form input[type="password"]:focus,
+body.dark-mode form input[type="number"]:focus,
+body.dark-mode form input[type="file"]:focus,
+body.dark-mode form textarea:focus,
+body.dark-mode form select:focus {
+    border-color: var(--theme-primary-accent); /* Use themed accent for focus */
+    box-shadow: 0 0 0 0.2rem rgba(46, 139, 87, 0.35); /* Adjust opacity for dark mode, using fixed RGB for SeaGreen */
+}
+
+/* Dark Mode Alerts */
+body.dark-mode .alert-success {
+    color: #d4edda; background-color: #155724; border-color: #1c7430;
+}
+body.dark-mode .alert-danger {
+    color: #f8d7da; background-color: #721c24; border-color: #842029;
+}
+body.dark-mode .alert-warning {
+    color: #fff3cd; background-color: #856404; border-color: #997404;
+}
+body.dark-mode .alert-info {
+    color: #d1ecf1; background-color: #0c5460; border-color: #0e6a7e;
+}
+
+body.dark-mode .container {
+     box-shadow: 0 0 10px rgba(255,255,255,0.05);
+}
+
+
+/* Responsive adjustments (from original file, retained and adapted) */
 @media (max-width: 768px) {
-    .container {
+    .container { /* This is a generic container, specific page layouts might override */
+        width: 95%;
         padding-left: 1rem;
         padding-right: 1rem;
     }
 
-    .navbar-nav {
+    .navbar-nav { /* Assuming Bootstrap-like structure if this class is used */
         margin-top: 1rem;
     }
 
-    .nav-link {
+    .nav-link { /* For individual nav items if they become block */
         padding: 0.75rem 1rem;
         margin: 0.25rem 0;
+        display: block; /* Stack nav links on smaller screens */
+        text-align: center; /* Center text for block nav links */
     }
+    /* Adjust .navbar for stacked items if necessary */
+    .navbar {
+        padding: 0.5rem; /* Reduce padding on smaller navbar */
+    }
+    .navbar-brand {
+        font-size: 1.25rem; /* Slightly smaller brand text */
+    }
+
 
     .card {
         margin-bottom: 1rem;
     }
 
-    .table-responsive {
+    .table-responsive { /* If used for tables */
         margin-bottom: 1rem;
         border-radius: 8px;
         overflow-x: auto;
     }
 
-    .btn {
+    .btn { /* Make buttons full-width on small screens for better touch targets */
         width: 100%;
         margin-bottom: 0.5rem;
     }
+    .btn:last-child {
+        margin-bottom: 0;
+    }
 
-    .form-control {
-        margin-bottom: 1rem;
+    .form-control, form input[type="text"], form input[type="email"], form input[type="password"], form input[type="number"], form input[type="file"], form textarea, form select {
+        margin-bottom: 1rem; /* More spacing for form elements */
     }
 }
 
-/* تحسينات إضافية للواجهة */
+/* Retained from original file, ensure they use new theme variables */
 .page-header {
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid var(--primary-color);
+    border-bottom: 2px solid var(--theme-primary-accent); /* Use themed accent */
 }
 
 .script-status {
@@ -196,16 +357,51 @@ html, body {
     border-radius: 20px;
     font-size: 0.875rem;
     font-weight: 500;
+    background-color: var(--theme-secondary-accent);
+    color: white;
 }
+body.dark-mode .script-status {
+    background-color: var(--theme-secondary-accent);
+    color: white;
+}
+
 
 .user-avatar {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background-color: var(--secondary-color);
+    background-color: var(--theme-secondary-accent);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 500;
 }
+body.dark-mode .user-avatar {
+    background-color: var(--theme-secondary-accent);
+}
+
+/* Styling for the main layout container .container if it's a direct child of body */
+body > .container {
+    width: 80%;
+    margin: 20px auto;
+    overflow: visible;
+    padding: 20px;
+    background-color: var(--theme-container-bg);
+    color: var(--theme-container-text);
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    border-radius: 8px;
+}
+
+body.dark-mode > .container {
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+
+@media (max-width: 768px) {
+    body > .container {
+        width: 95%;
+        padding: 15px;
+        margin: 10px auto;
+    }
+}
+/* Removed global wildcard transition to avoid performance issues. Specific transitions are preferred. */

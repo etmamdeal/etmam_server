@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}تواصل معنا - منصة إتمام{% endblock %}
+{% block title %}{{ _('تواصل معنا') }} - {{ _('منصة إتمام') }}{% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-8 text-center mb-5">
-            <h1 class="display-4 mb-4">تواصل معنا</h1>
-            <p class="lead">نحن هنا لمساعدتك. يمكنك التواصل معنا في أي وقت</p>
+            <h1 class="display-4 mb-4">{{ _('تواصل معنا') }}</h1>
+            <p class="lead">{{ _('نحن هنا لمساعدتك. يمكنك التواصل معنا في أي وقت') }}</p>
         </div>
     </div>
 
@@ -15,8 +15,8 @@
         {% if messages %}
             {% for category, message in messages %}
                 <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    {{ message }} {# Assumed translated in Python #}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ _('Close') }}"></button>
                 </div>
             {% endfor %}
         {% endif %}
@@ -28,50 +28,53 @@
                 <div class="card-body p-4">
                     <form action="{{ url_for('main.contact_us') }}" method="POST" id="contactForm" novalidate>
                         <div class="mb-4">
-                            <label for="name" class="form-label">الاسم الكامل</label>
+                            <label for="name" class="form-label">{{ _('الاسم الكامل') }}</label>
                             <input type="text" class="form-control" id="name" name="name" 
+                                   placeholder="{{ _('ادخل اسمك الكامل') }}"
                                    required minlength="3" maxlength="50"
                                    pattern="[ء-ي\s\w]+"
-                                   title="يرجى إدخال اسم صحيح">
+                                   title="{{ _('يرجى إدخال اسم صحيح') }}">
                             <div class="invalid-feedback">
-                                يرجى إدخال اسمك الكامل (3 أحرف على الأقل)
+                                {{ _('يرجى إدخال اسمك الكامل (3 أحرف على الأقل)') }}
                             </div>
                         </div>
 
                         <div class="mb-4">
-                            <label for="email" class="form-label">البريد الإلكتروني</label>
+                            <label for="email" class="form-label">{{ _('البريد الإلكتروني') }}</label>
                             <input type="email" class="form-control" id="email" name="email" 
+                                   placeholder="{{ _('example@domain.com') }}"
                                    required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
-                                   title="يرجى إدخال بريد إلكتروني صحيح">
+                                   title="{{ _('يرجى إدخال بريد إلكتروني صحيح') }}">
                             <div class="invalid-feedback">
-                                يرجى إدخال بريد إلكتروني صحيح
+                                {{ _('يرجى إدخال بريد إلكتروني صحيح') }}
                             </div>
                         </div>
 
                         <div class="mb-4">
-                            <label for="subject" class="form-label">الموضوع</label>
+                            <label for="subject" class="form-label">{{ _('الموضوع') }}</label>
                             <input type="text" class="form-control" id="subject" name="subject" 
+                                   placeholder="{{ _('ادخل موضوع الرسالة') }}"
                                    required minlength="5" maxlength="100"
-                                   title="يرجى إدخال موضوع الرسالة">
+                                   title="{{ _('يرجى إدخال موضوع الرسالة') }}">
                             <div class="invalid-feedback">
-                                يرجى إدخال موضوع الرسالة (5 أحرف على الأقل)
+                                {{ _('يرجى إدخال موضوع الرسالة (5 أحرف على الأقل)') }}
                             </div>
                         </div>
 
                         <div class="mb-4">
-                            <label for="message" class="form-label">الرسالة</label>
+                            <label for="message" class="form-label">{{ _('الرسالة') }}</label>
                             <textarea class="form-control" id="message" name="message" 
-                                      rows="5" required minlength="20"
-                                      title="يرجى كتابة رسالتك"></textarea>
+                                      rows="5" placeholder="{{ _('اكتب رسالتك هنا...') }}" required minlength="20"
+                                      title="{{ _('يرجى كتابة رسالتك') }}"></textarea>
                             <div class="invalid-feedback">
-                                يرجى كتابة رسالتك (20 حرف على الأقل)
+                                {{ _('يرجى كتابة رسالتك (20 حرف على الأقل)') }}
                             </div>
                         </div>
 
                         <div class="text-center">
                             <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn">
                                 <i class="fas fa-paper-plane me-2"></i>
-                                إرسال الرسالة
+                                {{ _('إرسال الرسالة') }}
                             </button>
                         </div>
                     </form>
@@ -87,15 +90,15 @@
                 <div class="col-md-6 mb-4">
                     <div class="contact-info-card">
                         <i class="fas fa-envelope-open-text fa-2x mb-3"></i>
-                        <h4>راسلنا عبر البريد</h4>
+                        <h4>{{ _('راسلنا عبر البريد') }}</h4>
                         <p>ai_agents@etmamdeal.com</p>
                     </div>
                 </div>
                 <div class="col-md-6 mb-4">
                     <div class="contact-info-card">
                         <i class="fas fa-clock fa-2x mb-3"></i>
-                        <h4>ساعات العمل</h4>
-                        <p>من الأحد إلى الخميس<br>9:00 صباحاً - 5:00 مساءً</p>
+                        <h4>{{ _('ساعات العمل') }}</h4>
+                        <p>{{ _('من الأحد إلى الخميس') }}<br>{{ _('9:00 صباحاً - 5:00 مساءً') }}</p>
                     </div>
                 </div>
             </div>

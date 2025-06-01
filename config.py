@@ -104,6 +104,11 @@ class Config:
     
     # تعطيل حسابات المشرف العادي
     DISABLE_ADMIN = True  # سيتم استخدام هذا المتغير للتحكم في تفعيل/تعطيل حسابات المشرف
+
+    # إعدادات Flask-Babel
+    LANGUAGES = {'ar': 'العربية', 'en': 'English'}
+    BABEL_DEFAULT_LOCALE = 'ar'
+    BABEL_DEFAULT_TIMEZONE = 'UTC'
     
     @staticmethod
     def init_app(app):
