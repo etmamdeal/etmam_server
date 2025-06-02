@@ -232,177 +232,89 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">إدارة المنتجات الرقمية</h5>
                 <div>
-                    <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addScriptModal">
+                    <a href="{{ url_for('main.add_script_route') }}" class="btn btn-primary me-2">
                         <i class="fas fa-code me-2"></i>إضافة سكربت
-                    </button>
-                    <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addEbookModal">
+                    </a>
+                    <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addEbookModalPlaceholder"> {# Placeholder: add_ebook route not yet implemented #}
                         <i class="fas fa-book me-2"></i>إضافة كتاب رقمي
                     </button>
-                    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addDatabaseModal">
+                    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addDatabaseModalPlaceholder"> {# Placeholder: add_database route not yet implemented #}
                         <i class="fas fa-database me-2"></i>إضافة قاعدة بيانات
                     </button>
                 </div>
             </div>
         </div>
         <div class="card-body">
-            <!-- تبويبات المنتجات -->
-            <ul class="nav nav-tabs mb-3" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link active" data-bs-toggle="tab" href="#scripts">السكربتات</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#ebooks">الكتب الرقمية</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#databases">قواعد البيانات</a>
-                </li>
-            </ul>
-
-            <!-- محتوى التبويبات -->
-            <div class="tab-content">
-                <!-- قسم السكربتات -->
-                <div class="tab-pane fade show active" id="scripts">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th>اسم السكربت</th>
-                                    <th>الوصف</th>
-                                    <th>السعر</th>
-                                    <th>الحالة</th>
-                                    <th>تاريخ الإضافة</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for script in scripts %}
-                                <tr>
-                                    <td>{{ script.name }}</td>
-                                    <td>{{ script.description }}</td>
-                                    <td>{{ script.price }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ 'success' if script.is_active else 'danger' }}">
-                                            {{ 'مفعل' if script.is_active else 'معطل' }}
-                                        </span>
-                                    </td>
-                                    <td>{{ script.created_at.strftime('%Y-%m-%d') }}</td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-primary" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#editScriptModal{{ script.id }}"
-                                                    title="تعديل السكربت">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-danger"
-                                                    onclick="deleteScript({{ script.id }})"
-                                                    title="حذف السكربت">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- قسم الكتب الرقمية -->
-                <div class="tab-pane fade" id="ebooks">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th>عنوان الكتاب</th>
-                                    <th>المؤلف</th>
-                                    <th>السعر</th>
-                                    <th>الحالة</th>
-                                    <th>تاريخ الإضافة</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for ebook in ebooks %}
-                                <tr>
-                                    <td>{{ ebook.title }}</td>
-                                    <td>{{ ebook.author }}</td>
-                                    <td>{{ ebook.price }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ 'success' if ebook.is_active else 'danger' }}">
-                                            {{ 'متوفر' if ebook.is_active else 'غير متوفر' }}
-                                        </span>
-                                    </td>
-                                    <td>{{ ebook.created_at.strftime('%Y-%m-%d') }}</td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-primary" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#editEbookModal{{ ebook.id }}"
-                                                    title="تعديل الكتاب">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-danger"
-                                                    onclick="deleteEbook({{ ebook.id }})"
-                                                    title="حذف الكتاب">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- قسم قواعد البيانات -->
-                <div class="tab-pane fade" id="databases">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th>اسم قاعدة البيانات</th>
-                                    <th>الوصف</th>
-                                    <th>السعر</th>
-                                    <th>الحالة</th>
-                                    <th>تاريخ الإضافة</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for db in databases %}
-                                <tr>
-                                    <td>{{ db.name }}</td>
-                                    <td>{{ db.description }}</td>
-                                    <td>{{ db.price }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ 'success' if db.is_active else 'danger' }}">
-                                            {{ 'متوفرة' if db.is_active else 'غير متوفرة' }}
-                                        </span>
-                                    </td>
-                                    <td>{{ db.created_at.strftime('%Y-%m-%d') }}</td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-primary" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#editDatabaseModal{{ db.id }}"
-                                                    title="تعديل قاعدة البيانات">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-danger"
-                                                    onclick="deleteDatabase({{ db.id }})"
-                                                    title="حذف قاعدة البيانات">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>اسم المنتج</th>
+                            <th>النوع</th>
+                            <th>الوصف</th>
+                            <th>السعر</th>
+                            <th>الحالة</th>
+                            <th>تاريخ الإضافة</th>
+                            <th>تفاصيل إضافية</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if all_products %}
+                            {% for product in all_products %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td>
+                                    {% if product.type == ProductType.SCRIPT %}
+                                        <span class="badge bg-primary">سكربت</span>
+                                    {% elif product.type == ProductType.EBOOK %}
+                                        <span class="badge bg-success">كتاب رقمي</span>
+                                    {% elif product.type == ProductType.DATABASE %}
+                                        <span class="badge bg-info">قاعدة بيانات</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ product.type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ product.description|truncate(100) }}</td>
+                                <td>{{ "%.2f"|format(product.price) }} ر.س</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if product.is_active else 'danger' }}">
+                                        {{ 'مفعل' if product.is_active else 'معطل' }}
+                                    </span>
+                                </td>
+                                <td>{{ product.created_at.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    {% if product.type == ProductType.SCRIPT and product.script_definition %}
+                                        <small>مسار الملف: {{ product.script_definition.file_path }}</small><br>
+                                        <small>المعلمات: {{ product.script_definition.parameters|tojson|truncate(50) }}</small>
+                                    {% elif product.type == ProductType.EBOOK and product.ebook_details %}
+                                        <small>المؤلف: {{ product.ebook_details.author }}</small><br>
+                                        <small>الفئة: {{ product.ebook_details.category }}</small>
+                                    {% elif product.type == ProductType.DATABASE and product.database_details %}
+                                        <small>نوع التقنية: {{ product.database_details.db_technology_type }}</small><br>
+                                        <small>الحجم: {{ product.database_details.size }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        {# Placeholder for Edit/Delete buttons. These would need specific routes per product type or a generic one #}
+                                        <button type="button" class="btn btn-sm btn-primary" title="تعديل المنتج (غير مفعل)">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" title="حذف المنتج (غير مفعل)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center">لا توجد منتجات لعرضها حالياً.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -703,73 +615,15 @@
     </div>
 {% endfor %}
 
-<!-- مودال إضافة سكربت جديد -->
-<div class="modal fade" id="addScriptModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">إضافة سكربت جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ url_for('add_script') }}" method="post" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">اسم السكربت</label>
-                                <input type="text" class="form-control" name="name" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">الوصف</label>
-                                <textarea class="form-control" name="description" rows="3" required></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">السعر</label>
-                                <input type="number" class="form-control" name="price" step="0.01" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">ملف السكربت (Python)</label>
-                                <input type="file" class="form-control" name="script_file" accept=".py" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">متطلبات التشغيل</label>
-                                <textarea class="form-control" name="requirements" rows="3" placeholder="كل متطلب في سطر جديد"></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">الفئة</label>
-                                <select class="form-select" name="category" required>
-                                    <option value="">اختر الفئة</option>
-                                    <option value="automation">أتمتة</option>
-                                    <option value="data_analysis">تحليل بيانات</option>
-                                    <option value="web_scraping">استخراج بيانات</option>
-                                    <option value="api_integration">تكامل API</option>
-                                    <option value="other">أخرى</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_active" id="scriptActive" checked>
-                            <label class="form-check-label" for="scriptActive">
-                                تفعيل السكربت
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">إضافة السكربت</button>
-                </div>
-            </form>
-        </div>
-    </div>
+<!-- مودال إضافة سكربت جديد - This modal is no longer triggered directly for adding scripts.
+     Keeping structure for reference or if other add modals follow this pattern.
+     The "إضافة سكربت" button now links to a separate page. -->
+<div class="modal fade" id="addScriptModalPlaceholder" tabindex="-1">
+    <!-- ... content for a generic add script modal if needed ... -->
 </div>
 
-<!-- مودال إضافة كتاب رقمي جديد -->
-<div class="modal fade" id="addEbookModal" tabindex="-1">
+<!-- مودال إضافة كتاب رقمي جديد - Placeholder, actual implementation would need a dedicated route -->
+<div class="modal fade" id="addEbookModalPlaceholder" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">

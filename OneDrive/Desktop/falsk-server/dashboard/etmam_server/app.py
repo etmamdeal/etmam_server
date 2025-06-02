@@ -7,6 +7,7 @@ from flask import Blueprint, Flask, render_template, request, redirect, url_for,
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
+import werkzeug.routing.exceptions # Added for specific exception handling
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import io
@@ -25,8 +26,13 @@ load_dotenv()
 # إنشاء Blueprint
 bp = Blueprint('main', __name__)
 
+# Context processor to inject 'now' for templates
+@bp.app_context_processor
+def inject_now():
+    return {'now': datetime.utcnow()}
+
 # تهيئة قاعدة البيانات
-from models import db, User, Script, UserScript, RunLog, Role, Permission, Product, ProductType, Subscription, SubscriptionPeriod, Ebook, Database
+from models import db, User, Script, UserScript, RunLog, Role, Permission, Product, ProductType, Subscription, SubscriptionPeriod, Ebook, Database, Ticket, TicketMessage, TicketAttachment
 
 # تهيئة نظام تسجيل الدخول
 login_manager = LoginManager()
@@ -481,12 +487,23 @@ def admin_dashboard():
         # to differentiate and access product.script_definition,
         # product.ebook_details, or product.database_details
 
-        return render_template(
-            'admin_dashboard.html',
-            users=users,
-            all_products=all_products, # Pass all products
-            ProductType=ProductType # Pass ProductType class for template usage
-        )
+        try:
+            return render_template(
+                'admin_dashboard.html',
+                users=users,
+                all_products=all_products, # Pass all products
+                ProductType=ProductType # Pass ProductType class for template usage
+            )
+        except werkzeug.routing.exceptions.BuildError as e:
+            if 'toggle_user_status' in str(e):
+                current_app.logger.error(f"BuildError for 'toggle_user_status' in admin_dashboard: {str(e)} - Rendering minimal or redirecting.")
+                flash("لوحة التحكم للمشرف واجهت خطأ في عرض جزء من الصفحة، ولكن الوظيفة الرئيسية تمت.", "warning")
+                # Option 1: Redirect to a safe page
+                return redirect(url_for('main.homepage'))
+                # Option 2: Render a minimal template (if one exists or create simple one)
+                # return render_template('admin/admin_dashboard_minimal_error.html', users=users, ProductType=ProductType)
+            else:
+                raise e # Re-raise other BuildErrors
         
     except Exception as e:
         current_app.logger.error(f"Error in admin_dashboard: {str(e)}")
@@ -524,4 +541,294 @@ def manage_user_action(user_id, action):
         flash("حدث خطأ أثناء تحديث حالة المستخدم", "danger")
         return redirect(url_for('main.manage_users'))
 
-# حذف سطر تسجيل Blueprint لأنه يتم في run.py 
+# حذف سطر تسجيل Blueprint لأنه يتم في run.py
+
+
+# Admin route to add a new script
+@bp.route('/admin/add-script', methods=['GET', 'POST'])
+@admin_required
+def add_script_route(): # Renamed to avoid conflict if 'add_script' is used elsewhere
+    if request.method == 'POST':
+        try:
+            script_name = request.form.get('name')
+            description = request.form.get('description')
+            parameters_str = request.form.get('parameters', '{}') # Default to empty JSON object
+            price = request.form.get('price', 0.0)
+            is_active = request.form.get('is_active') == 'true'
+
+            if 'script_file' not in request.files:
+                flash('لم يتم اختيار ملف للسكربت!', 'danger')
+                return redirect(request.url)
+
+            file = request.files['script_file']
+
+            if file.filename == '':
+                flash('لم يتم اختيار ملف للسكربت!', 'danger')
+                return redirect(request.url)
+
+            if not file.filename.endswith('.py'):
+                flash('الملف المسموح به هو .py فقط', 'danger')
+                return redirect(request.url)
+
+            # Validate parameters as JSON
+            try:
+                parameters_json = json.loads(parameters_str) if parameters_str.strip() else {}
+            except json.JSONDecodeError:
+                flash('صيغة معلمات السكربت (JSON) غير صحيحة.', 'danger')
+                return redirect(request.url)
+
+            # Securely save the file
+            filename = secure_filename(file.filename)
+            # Construct path relative to the app's instance folder or a configured UPLOAD_FOLDER
+            # For consistency, ensure UPLOAD_FOLDER and its subdirectories are handled correctly.
+            # Assuming current_app.config['UPLOAD_FOLDER'] = 'uploads' (relative to instance or app root)
+            # and we want scripts in a 'scripts' subfolder of that.
+
+            # Path should be relative to the application root or instance path for portability
+            # If UPLOAD_FOLDER is 'uploads', this will be 'uploads/scripts'
+            scripts_upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'scripts')
+
+            # Create the directory if it doesn't exist (it should be created by config.init_app)
+            # For absolute path, one might use current_app.root_path or current_app.instance_path
+            # Here, we assume UPLOAD_FOLDER is relative from where app runs or an absolute path itself.
+            # If UPLOAD_FOLDER is relative, let's make it relative to app.root_path for clarity
+            if not os.path.isabs(scripts_upload_folder):
+                 scripts_upload_path = os.path.join(current_app.root_path, scripts_upload_folder)
+            else:
+                 scripts_upload_path = scripts_upload_folder
+
+            os.makedirs(scripts_upload_path, exist_ok=True)
+
+            file_path_for_db = os.path.join(scripts_upload_folder, filename) # Path to store in DB (relative)
+            absolute_file_path = os.path.join(scripts_upload_path, filename) # Absolute path to save file
+
+            # Check for filename collision (optional, but good practice)
+            if os.path.exists(absolute_file_path):
+                # Add a unique prefix/suffix or reject
+                base, ext = os.path.splitext(filename)
+                new_filename = f"{base}_{int(datetime.now().timestamp())}{ext}"
+                absolute_file_path = os.path.join(scripts_upload_path, new_filename)
+                file_path_for_db = os.path.join(scripts_upload_folder, new_filename)
+
+            file.save(absolute_file_path)
+
+            # Create Script object (actual script details)
+            new_script_obj = Script(
+                name=script_name, # Or a more internal name if Product.name is primary display name
+                description=description, # Or perhaps Script model has its own detailed/technical description
+                file_path=file_path_for_db, # Store relative path in DB
+                parameters=parameters_json,
+                created_by=current_user.id,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            db.session.add(new_script_obj)
+            db.session.flush() # Flush to get new_script_obj.id for the Product
+
+            # Create Product object (store/shop listing)
+            new_product = Product(
+                name=script_name,
+                description=description,
+                type=ProductType.SCRIPT,
+                price=float(price),
+                is_active=is_active,
+                created_by=current_user.id,
+                script_id=new_script_obj.id, # Link to the Script object
+                created_at=datetime.utcnow(),
+                last_modified=datetime.utcnow()
+            )
+            db.session.add(new_product)
+            db.session.commit()
+
+            flash(f'تمت إضافة السكربت "{script_name}" بنجاح!', 'success')
+            return redirect(url_for('main.admin_dashboard')) # Or a script management page
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error adding new script: {str(e)}")
+            flash('حدث خطأ أثناء إضافة السكربت. الرجاء المحاولة مرة أخرى.', 'danger')
+            return redirect(request.url)
+
+    return render_template('admin/add_script.html')
+
+# Client Ticket System Routes
+@bp.route('/client/tickets/new', methods=['GET', 'POST'], endpoint='client_new_ticket')
+@login_required
+@client_required
+def client_new_ticket():
+    if request.method == 'POST':
+        ticket_type = request.form.get('ticket_type')
+        subject = request.form.get('subject')
+        description = request.form.get('description')
+
+        if not all([ticket_type, subject, description]):
+            flash('جميع الحقول مطلوبة لإنشاء التذكرة.', 'danger')
+            return redirect(url_for('main.client_new_ticket'))
+
+        new_ticket = Ticket(
+            user_id=current_user.id,
+            ticket_type=ticket_type,
+            subject=subject,
+            description=description,
+            status='open', # Default status
+            priority='medium' # Default priority
+            # created_at and updated_at have defaults in model
+        )
+        db.session.add(new_ticket)
+        db.session.commit() # Commit to get new_ticket.id
+
+        # Notify admin about the new ticket
+        email_subject = f"تذكرة دعم جديدة #{new_ticket.id}: {new_ticket.subject}"
+        email_body = f"""
+        مرحباً أيها المشرف,
+
+        تم فتح تذكرة دعم جديدة بواسطة المستخدم {current_user.username} (Email: {current_user.email}).
+
+        بيانات التذكرة:
+        - المعرف: {new_ticket.id}
+        - النوع: {new_ticket.ticket_type}
+        - الموضوع: {new_ticket.subject}
+        - الوصف: {new_ticket.description}
+        - الأولوية: {new_ticket.priority}
+
+        يمكنك عرض التذكرة والرد عليها عبر الرابط التالي:
+        {url_for('main.admin_view_ticket', ticket_id=new_ticket.id, _external=True)}
+        """
+        send_email(email_subject, email_body, ADMIN_EMAIL)
+
+        flash('تم إنشاء تذكرة الدعم بنجاح!', 'success')
+        return redirect(url_for('main.client_list_tickets'))
+
+    return render_template('client/new_ticket.html')
+
+@bp.route('/client/tickets', methods=['GET'], endpoint='client_list_tickets')
+@login_required
+@client_required
+def client_list_tickets():
+    tickets = Ticket.query.filter_by(user_id=current_user.id).order_by(Ticket.updated_at.desc()).all()
+    return render_template('client/list_tickets.html', tickets=tickets)
+
+# Admin Ticket System Routes
+@bp.route('/admin/tickets', methods=['GET'], endpoint='admin_list_tickets')
+@login_required
+@admin_required
+def admin_list_tickets():
+    tickets = Ticket.query.order_by(Ticket.updated_at.desc()).all()
+    # For displaying user email/name, the Ticket model has ticket.user relationship
+    return render_template('admin/list_tickets.html', tickets=tickets)
+
+@bp.route('/client/tickets/<int:ticket_id>', methods=['GET', 'POST'], endpoint='client_view_ticket')
+@login_required
+@client_required
+def client_view_ticket(ticket_id):
+    ticket = Ticket.query.get_or_404(ticket_id)
+    if ticket.user_id != current_user.id:
+        abort(403) # Not authorized to view this ticket
+
+    if request.method == 'POST':
+        message_body = request.form.get('message_body')
+        if not message_body:
+            flash('لا يمكن إرسال رسالة فارغة.', 'warning')
+        else:
+            new_message = TicketMessage(
+                ticket_id=ticket.id,
+                user_id=current_user.id,
+                message_body=message_body
+                # created_at has default
+            )
+            ticket.updated_at = datetime.utcnow() # Update ticket's last update time
+            db.session.add(new_message)
+            db.session.add(ticket) # Add ticket to session due to updated_at change
+            db.session.commit()
+
+            # Notify admin about the client's new message
+            email_subject = f"رد من العميل على تذكرة الدعم #{ticket.id}: {ticket.subject}"
+            email_body = f"""
+            مرحباً أيها المشرف,
+
+            قام العميل {current_user.username} (Email: {current_user.email}) بالرد على التذكرة "{ticket.subject}" (ID: {ticket.id}).
+
+            الرسالة:
+            {message_body}
+
+            يمكنك عرض التذكرة والرد عليها عبر الرابط التالي:
+            {url_for('main.admin_view_ticket', ticket_id=ticket.id, _external=True)}
+            """
+            send_email(email_subject, email_body, ADMIN_EMAIL)
+
+            flash('تم إرسال رسالتك بنجاح.', 'success')
+            return redirect(url_for('main.client_view_ticket', ticket_id=ticket.id))
+
+    messages = TicketMessage.query.filter_by(ticket_id=ticket.id).order_by(TicketMessage.created_at.asc()).all()
+    return render_template('client/view_ticket.html', ticket=ticket, messages=messages)
+
+@bp.route('/admin/tickets/<int:ticket_id>', methods=['GET', 'POST'], endpoint='admin_view_ticket')
+@login_required
+@admin_required
+def admin_view_ticket(ticket_id):
+    ticket = Ticket.query.get_or_404(ticket_id)
+    # No user_id check here, as admin should be able to see all tickets
+
+    if request.method == 'POST':
+        message_body = request.form.get('message_body')
+        new_status = request.form.get('new_status')
+        new_priority = request.form.get('new_priority')
+
+        action_taken = False # Flag to check if any action was performed
+
+        if message_body:
+            # Admin posts a message
+            admin_message = TicketMessage(
+                ticket_id=ticket.id,
+                user_id=current_user.id, # Admin is the sender
+                message_body=message_body
+            )
+            db.session.add(admin_message)
+            action_taken = True
+
+            # Notify client of admin's reply
+            email_subject = f"تحديث على تذكرة الدعم #{ticket.id}: {ticket.subject}"
+            email_body = f"""
+            مرحباً {ticket.user.username},
+
+            قام أحد المشرفين بالرد على تذكرتك "{ticket.subject}" (ID: {ticket.id}).
+
+            الرسالة:
+            {message_body}
+
+            يمكنك عرض التذكرة والرد عليها عبر الرابط التالي:
+            {url_for('main.client_view_ticket', ticket_id=ticket.id, _external=True)}
+
+            مع تحيات فريق دعم إتمام,
+            """
+            send_email(email_subject, email_body, ticket.user.email)
+
+        if new_status and new_status != ticket.status:
+            ticket.status = new_status
+            action_taken = True
+            # TODO: Potentially send email notification about status change
+
+        if new_priority and new_priority != ticket.priority:
+            ticket.priority = new_priority
+            action_taken = True
+            # TODO: Potentially send email notification about priority change
+
+        if action_taken:
+            ticket.updated_at = datetime.utcnow()
+            db.session.add(ticket) # Add ticket to session due to updated_at or status/priority change
+            db.session.commit()
+            flash('تم تحديث التذكرة بنجاح!', 'success')
+        else:
+            flash('لم يتم إجراء أي تغييرات على التذكرة.', 'info')
+
+        return redirect(url_for('main.admin_view_ticket', ticket_id=ticket.id))
+
+    messages = TicketMessage.query.filter_by(ticket_id=ticket.id).order_by(TicketMessage.created_at.asc()).all()
+    available_statuses = ['open', 'in_progress', 'closed', 'resolved']
+    available_priorities = ['low', 'medium', 'high', 'urgent']
+
+    return render_template('admin/view_ticket.html',
+                           ticket=ticket,
+                           messages=messages,
+                           available_statuses=available_statuses,
+                           available_priorities=available_priorities)

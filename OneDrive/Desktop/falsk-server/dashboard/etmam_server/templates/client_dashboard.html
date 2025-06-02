@@ -76,26 +76,29 @@
                     <h5 class="card-title mb-4">روابط سريعة</h5>
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <a href="{{ url_for('my_scripts') }}" class="text-decoration-none">
+                            {# Changed my_scripts to main.client_dashboard as my_scripts route doesn't exist #}
+                            <a href="{{ url_for('main.client_dashboard') }}" class="text-decoration-none">
                                 <div class="p-3 bg-light rounded text-center">
                                     <i class="fas fa-code mb-2 text-primary"></i>
-                                    <h6 class="mb-0">سكربتاتي</h6>
+                                    <h6 class="mb-0">سكربتاتي (الرئيسية)</h6>
                                 </div>
                             </a>
                         </div>
                         <div class="col-md-4">
-                            <a href="{{ url_for('script_logs') }}" class="text-decoration-none">
+                             {# Changed script_logs to main.client_dashboard as script_logs route doesn't exist #}
+                            <a href="{{ url_for('main.client_dashboard') }}" class="text-decoration-none">
                                 <div class="p-3 bg-light rounded text-center">
                                     <i class="fas fa-history mb-2 text-primary"></i>
-                                    <h6 class="mb-0">سجل العمليات</h6>
+                                    <h6 class="mb-0">سجل العمليات (الرئيسية)</h6>
                                 </div>
                             </a>
                         </div>
                         <div class="col-md-4">
-                            <a href="{{ url_for('profile') }}" class="text-decoration-none">
+                             {# Changed profile to main.homepage as profile route doesn't exist #}
+                            <a href="{{ url_for('main.homepage') }}" class="text-decoration-none">
                                 <div class="p-3 bg-light rounded text-center">
                                     <i class="fas fa-user-cog mb-2 text-primary"></i>
-                                    <h6 class="mb-0">الملف الشخصي</h6>
+                                    <h6 class="mb-0">الملف الشخصي (الرئيسية)</h6>
                                 </div>
                             </a>
                         </div>
