@@ -20,6 +20,7 @@
                     {% endwith %}
 
                     <form method="POST" class="needs-validation" novalidate>
+                        {{ csrf_token() }}
                         <div class="mb-4">
                             <label class="form-label">اسم المستخدم</label>
                             <div class="input-group">
@@ -74,6 +75,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('main.reset_password_request') }}" method="POST">
+                {{ csrf_token() }}
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">البريد الإلكتروني</label>
@@ -99,6 +101,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('main.admin_register') }}" method="POST">
+                {{ csrf_token() }}
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">الاسم الكامل</label>

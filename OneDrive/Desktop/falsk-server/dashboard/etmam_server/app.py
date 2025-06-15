@@ -6,6 +6,7 @@
 from flask import Blueprint, Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, get_flashed_messages, abort, current_app
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
+from .forms import ResetPasswordForm # Added
 from werkzeug.security import generate_password_hash, check_password_hash
 import werkzeug.routing.exceptions # Added for specific exception handling
 from datetime import datetime, timedelta
@@ -374,9 +375,21 @@ def reset_password_request():
         current_app.logger.error(f"خطأ في طلب إعادة تعيين كلمة المرور: {str(e)}")
         flash("حدث خطأ أثناء معالجة الطلب. الرجاء المحاولة مرة أخرى.", "danger")
         
-    return redirect(url_for('main.admin_login'))
+    return redirect(url_for('main.admin_login')) # Keep this, as it's for the modal on admin_login page. The new usage will also redirect.
+
+# This existing route is used by a modal on the admin_login page.
+# We will now also use it from the super_admin_dashboard.
+# Adding @super_admin_required would break its use for non-logged-in users trying to register an admin account (if that's a flow).
+# However, the task implies this route should *now* be for super_admin use.
+# This means the modal on admin_login.html for admin_register will become super_admin only.
+# Or, we need a new route for super_admin adding admins.
+# Given the instruction "Refactor admin_register for Super Admin Use", I will add the decorator and change redirect.
+# This implies the previous usage from admin_login.html's modal might become non-functional or also require super_admin.
+# For now, I will follow the refactoring instruction strictly.
 
 @bp.route('/admin-register', methods=['POST'])
+@login_required # Required for current_user context
+@super_admin_required # Add super_admin_required decorator
 def admin_register():
     try:
         # التحقق من البيانات
@@ -406,21 +419,22 @@ def admin_register():
             password=generate_password_hash(password),
             full_name=full_name,
             phone=phone,
-            is_admin=True,
+            role=Role.ADMIN, # Changed from is_admin=True
             is_active=False  # يحتاج لتفعيل من السوبر أدمن
         )
         
         db.session.add(admin)
         db.session.commit()
         
-        flash("تم إنشاء حساب المشرف بنجاح. يرجى انتظار تفعيل الحساب من قبل الإدارة.", "success")
+        # Adjusted flash message for super_admin context
+        flash(f"تم إنشاء حساب المشرف {admin.username} بنجاح. يحتاج الحساب إلى تفعيل.", "success")
         
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"خطأ في تسجيل المشرف: {str(e)}")
         flash("حدث خطأ أثناء إنشاء الحساب. الرجاء المحاولة مرة أخرى.", "danger")
         
-    return redirect(url_for('main.admin_login'))
+    return redirect(url_for('main.super_admin_dashboard')) # Change redirect to super_admin_dashboard
 
 @bp.route('/super-admin')
 @login_required
@@ -441,6 +455,8 @@ def super_admin_dashboard():
         # to differentiate and access product.script_definition,
         # product.ebook_details, or product.database_details
 
+        all_scripts = Script.query.all() # Fetch all actual scripts for assignment
+
         permissions = Permission.get_all_permissions()
         stats = {
             'admins_count': len(admins),
@@ -456,6 +472,7 @@ def super_admin_dashboard():
             admins=admins,
             users=users,
             all_products=all_products, # Pass all products
+            scripts=all_scripts, # Pass all scripts for assignment modal
             permissions=permissions,
             stats=stats,
             ProductType=ProductType # Pass ProductType class for template usage
@@ -513,7 +530,38 @@ def admin_dashboard():
 @bp.route('/client')
 @client_required
 def client_dashboard():
-    return render_template('client_dashboard.html')
+    # Calculate statistics for the client dashboard
+    user_id = current_user.id
+
+    # Active scripts: Count of UserScript entries for the current_user
+    active_scripts_count = UserScript.query.filter_by(user_id=user_id).count() # Assuming UserScript implies active/assigned
+
+    # Today's operations: Count of RunLog entries for the current_user created today
+    today_start = datetime.combine(date.today(), datetime.min.time())
+    today_end = datetime.combine(date.today(), datetime.max.time())
+    today_operations_count = RunLog.query.filter(
+        RunLog.user_id == user_id,
+        RunLog.executed_at >= today_start,
+        RunLog.executed_at <= today_end
+    ).count()
+
+    # Successful operations: Count of RunLog entries for the current_user with status == 'success'
+    # Assuming 'success' is the indicator. Adjust if it's different (e.g., 'completed')
+    successful_operations_count = RunLog.query.filter_by(user_id=user_id, status='success').count()
+                                                                        # Make sure 'success' is the correct status string
+
+    # Recent operations: A list of the last 5-10 RunLog entries for the current_user
+    recent_operations = RunLog.query.filter_by(user_id=user_id)\
+                                    .order_by(RunLog.executed_at.desc())\
+                                    .limit(5).all() # Fetching last 5, can be adjusted
+
+    stats = {
+        'active_scripts': active_scripts_count,
+        'today_operations': today_operations_count,
+        'successful_operations': successful_operations_count,
+    }
+
+    return render_template('client_dashboard.html', stats=stats, recent_operations=recent_operations, now=datetime.utcnow())
 
 @bp.route('/manage_users')
 @login_required
@@ -832,3 +880,209 @@ def admin_view_ticket(ticket_id):
                            messages=messages,
                            available_statuses=available_statuses,
                            available_priorities=available_priorities)
+
+@bp.route('/super-admin/user/<int:user_id>/toggle-status', methods=['POST'], endpoint='toggle_user_status')
+@login_required
+@super_admin_required
+def toggle_user_status(user_id):
+    user_to_toggle = User.query.get_or_404(user_id)
+
+    if user_to_toggle.is_super_admin: # Cannot deactivate a super_admin
+        flash('لا يمكن تغيير حالة حساب السوبر أدمن.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    if user_to_toggle.role == Role.ADMIN: # Admins should be handled by toggle_admin_status
+        flash('لتغيير حالة حساب المشرف، يرجى استخدام المسار المخصص للمشرفين.', 'warning')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    user_to_toggle.is_active = not user_to_toggle.is_active
+    db.session.commit()
+
+    status_message = "مفعل" if user_to_toggle.is_active else "معطل"
+    flash(f'تم تغيير حالة المستخدم {user_to_toggle.username} إلى {status_message} بنجاح.', 'success')
+    return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/super-admin/admin/<int:admin_id>/toggle-status', methods=['POST'], endpoint='toggle_admin_status')
+@login_required
+@super_admin_required
+def toggle_admin_status(admin_id):
+    admin_to_toggle = User.query.get_or_404(admin_id)
+
+    if admin_to_toggle.role != Role.ADMIN:
+        flash('هذا المستخدم ليس مشرفاً.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    if admin_to_toggle.id == current_user.id:
+        flash('لا يمكن للسوبر أدمن تعطيل حسابه الخاص بهذه الطريقة.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    admin_to_toggle.is_active = not admin_to_toggle.is_active
+    db.session.commit()
+
+    status_message = "مفعل" if admin_to_toggle.is_active else "معطل"
+    flash(f'تم تغيير حالة المشرف {admin_to_toggle.username} إلى {status_message} بنجاح.', 'success')
+    return redirect(url_for('main.super_admin_dashboard'))
+
+# User Management by Super Admin
+
+@bp.route('/super-admin/user/add', methods=['POST'], endpoint='add_user_by_superadmin')
+@login_required
+@super_admin_required
+def add_user_by_superadmin():
+    full_name = request.form.get('full_name')
+    username = request.form.get('username')
+    email = request.form.get('email')
+    phone = request.form.get('phone')
+    password = request.form.get('password')
+    confirm_password = request.form.get('confirm_password')
+
+    if not all([full_name, username, email, password, confirm_password]):
+        flash('جميع الحقول (الاسم الكامل، اسم المستخدم، البريد، كلمة المرور، تأكيد كلمة المرور) مطلوبة.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    if password != confirm_password:
+        flash('كلمتا المرور غير متطابقتين.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    if len(password) < 6:
+        flash('كلمة المرور يجب أن تكون 6 أحرف على الأقل.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    if User.query.filter_by(username=username).first():
+        flash(f'اسم المستخدم "{username}" مسجل مسبقاً.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    if User.query.filter_by(email=email).first():
+        flash(f'البريد الإلكتروني "{email}" مسجل مسبقاً.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    new_user = User(
+        full_name=full_name,
+        username=username,
+        email=email,
+        phone=phone,
+        password=generate_password_hash(password),
+        role=Role.USER,
+        is_active=True # Or False, if manual activation is preferred
+    )
+    db.session.add(new_user)
+    try:
+        db.session.commit()
+        flash(f'تم إضافة المستخدم {new_user.username} بنجاح.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error adding user by superadmin: {str(e)}")
+        flash('حدث خطأ أثناء إضافة المستخدم.', 'danger')
+
+    return redirect(url_for('main.super_admin_dashboard'))
+
+
+@bp.route('/super-admin/user/<int:user_id>/edit', methods=['POST'], endpoint='edit_user_by_superadmin')
+@login_required
+@super_admin_required
+def edit_user_by_superadmin(user_id):
+    user_to_edit = User.query.get_or_404(user_id)
+
+    if user_to_edit.role != Role.USER:
+        flash('يمكن تعديل حسابات المستخدمين العاديين فقط من هنا.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    new_full_name = request.form.get('full_name')
+    new_email = request.form.get('email')
+    new_phone = request.form.get('phone')
+
+    if not new_full_name or len(new_full_name) < 3:
+        flash('الاسم الكامل مطلوب ويجب أن يكون 3 أحرف على الأقل.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    if not new_email:
+        flash('البريد الإلكتروني مطلوب.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    existing_user_with_email = User.query.filter(User.email == new_email, User.id != user_id).first()
+    if existing_user_with_email:
+        flash(f'البريد الإلكتروني "{new_email}" مستخدم بالفعل.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    user_to_edit.full_name = new_full_name
+    user_to_edit.email = new_email
+    user_to_edit.phone = new_phone
+
+    try:
+        db.session.commit()
+        flash(f'تم تحديث بيانات المستخدم {user_to_edit.username} بنجاح.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error editing user {user_to_edit.username}: {str(e)}")
+        flash('حدث خطأ أثناء تحديث بيانات المستخدم.', 'danger')
+
+    return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/super-admin/user/<int:user_id>/reset-password', methods=['POST'], endpoint='reset_user_password_by_superadmin')
+@login_required
+@super_admin_required
+def reset_user_password_by_superadmin(user_id):
+    user_to_reset = User.query.get_or_404(user_id)
+
+    if user_to_reset.role != Role.USER:
+        flash('يمكن إعادة تعيين كلمة مرور المستخدمين العاديين فقط.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    new_password = request.form.get('password')
+    if not new_password or len(new_password) < 6:
+        flash('كلمة المرور يجب أن تكون 6 أحرف على الأقل.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    user_to_reset.password = generate_password_hash(new_password)
+    try:
+        db.session.commit()
+        flash(f'تم إعادة تعيين كلمة مرور المستخدم {user_to_reset.username} بنجاح.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error resetting user password for {user_to_reset.username}: {str(e)}")
+        flash('حدث خطأ أثناء إعادة تعيين كلمة المرور.', 'danger')
+
+    return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/super-admin/user/<int:user_id>/assign-scripts', methods=['POST'], endpoint='assign_scripts_to_user_by_superadmin')
+@login_required
+@super_admin_required
+def assign_scripts_to_user_by_superadmin(user_id):
+    user_to_assign = User.query.get_or_404(user_id)
+
+    if user_to_assign.role != Role.USER:
+        flash('يمكن تخصيص السكربتات للمستخدمين العاديين فقط.', 'danger')
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    script_ids = request.form.getlist('scripts[]')
+
+    # Clear existing script associations for this user
+    UserScript.query.filter_by(user_id=user_id).delete()
+
+    for script_id_str in script_ids:
+        try:
+            script_id = int(script_id_str)
+            script = Script.query.get(script_id)
+            if script:
+                user_script = UserScript(
+                    user_id=user_id,
+                    script_id=script.id,
+                    assigned_by=current_user.id,
+                    assigned_at=datetime.utcnow()
+                    # config_data can be set here if there's a way to input it, otherwise defaults to {}
+                )
+                db.session.add(user_script)
+            else:
+                flash(f'لم يتم العثور على السكربت بالمعرف {script_id_str}.', 'warning')
+        except ValueError:
+            flash(f'معرف السكربت غير صالح: {script_id_str}.', 'warning')
+
+    try:
+        db.session.commit()
+        flash(f'تم تحديث السكربتات المخصصة للمستخدم {user_to_assign.username} بنجاح.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error assigning scripts to user {user_to_assign.username}: {str(e)}")
+        flash('حدث خطأ أثناء تخصيص السكربتات.', 'danger')
+
+    return redirect(url_for('main.super_admin_dashboard'))

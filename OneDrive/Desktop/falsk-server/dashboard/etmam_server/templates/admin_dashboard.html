@@ -44,10 +44,8 @@
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-transparent">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">إدارة المستخدمين</h5>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                    <i class="fas fa-plus me-2"></i>إضافة مستخدم جديد
-                </button>
+                <h5 class="mb-0">عرض المستخدمين</h5>
+                {# Removed "Add User" button for admin #}
             </div>
         </div>
         <div class="card-body">
@@ -80,33 +78,8 @@
                                 </span>
                             </td>
                             <td>
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-sm btn-primary"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#editUserModal{{ user.id }}"
-                                            title="تعديل المستخدم">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-info"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#assignScriptsModal{{ user.id }}"
-                                            title="تخصيص سكربتات">
-                                        <i class="fas fa-code"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-warning"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#resetUserPasswordModal{{ user.id }}"
-                                            title="إعادة تعيين كلمة المرور">
-                                        <i class="fas fa-lock"></i>
-                                    </button>
-                                    <!-- <a href="{{ url_for('toggle_user_status', user_id=user.id) }}"
-                                       class="btn btn-sm btn-{{ 'danger' if user.is_active else 'success' }}"
-                                       onclick="return confirm('هل أنت متأكد من {{ 'تعطيل' if user.is_active else 'تفعيل' }} هذا المستخدم؟')"
-                                       title="{{ 'تعطيل' if user.is_active else 'تفعيل' }} المستخدم">
-                                        <i class="fas fa-{{ 'ban' if user.is_active else 'check' }}"></i>
-                                    </a> -->
-                                    <button class="btn btn-sm btn-secondary" disabled title="Toggle Status - Not Implemented"><i class="fas fa-ban"></i></button>
-                                </div>
+                                {# Removed user action buttons for edit, assign scripts, reset password, toggle status for admin #}
+                                لا توجد إجراءات متاحة للمشرف العادي.
                             </td>
                         </tr>
                         {% endfor %}
@@ -125,12 +98,7 @@
                     <a href="{{ url_for('main.add_script_route') }}" class="btn btn-primary me-2">
                         <i class="fas fa-code me-2"></i>إضافة سكربت
                     </a>
-                    <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addEbookModalPlaceholder"> {# Placeholder #}
-                        <i class="fas fa-book me-2"></i>إضافة كتاب رقمي
-                    </button>
-                    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addDatabaseModalPlaceholder"> {# Placeholder #}
-                        <i class="fas fa-database me-2"></i>إضافة قاعدة بيانات
-                    </button>
+                    {# Removed Add Ebook and Add Database buttons for admin #}
                 </div>
             </div>
         </div>
@@ -210,151 +178,8 @@
     </div>
 </div>
 
-<!-- Modal إضافة مستخدم جديد -->
-<div class="modal fade" id="addUserModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">إضافة مستخدم جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ url_for('add_user') }}" method="post">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">الاسم الكامل</label>
-                        <input type="text" class="form-control" name="full_name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">اسم المستخدم</label>
-                        <input type="text" class="form-control" name="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">البريد الإلكتروني</label>
-                        <input type="email" class="form-control" name="email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">رقم الجوال</label>
-                        <input type="tel" class="form-control" name="phone">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">كلمة المرور</label>
-                        <div class="input-group">
-                            <input type="password" class="form-control" name="password" id="newUserPassword" required>
-                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('newUserPassword')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">إضافة المستخدم</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-{% for user in users %}
-    <!-- مودال تعديل المستخدم -->
-    <div class="modal fade" id="editUserModal{{ user.id }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">تعديل المستخدم {{ user.full_name }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="{{ url_for('edit_user', user_id=user.id) }}" method="post">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">الاسم الكامل</label>
-                            <input type="text" class="form-control" name="full_name" value="{{ user.full_name }}" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">البريد الإلكتروني</label>
-                            <input type="email" class="form-control" name="email" value="{{ user.email }}" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">رقم الجوال</label>
-                            <input type="tel" class="form-control" name="phone" value="{{ user.phone }}">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                        <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- مودال تخصيص السكربتات -->
-    <div class="modal fade" id="assignScriptsModal{{ user.id }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">تخصيص سكربتات - {{ user.full_name }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="{{ url_for('assign_scripts_to_user', user_id=user.id) }}" method="post">
-                    <div class="modal-body">
-                        {% for script in scripts %}
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox"
-                                       name="scripts[]"
-                                       value="{{ script.id }}"
-                                       id="script_{{ user.id }}_{{ script.id }}"
-                                       {% if script in user.scripts %}checked{% endif %}>
-                                <label class="form-check-label" for="script_{{ user.id }}_{{ script.id }}">
-                                    {{ script.name }}
-                                    {% if script in user.scripts %}
-                                        {% set user_script = user.scripts|selectattr("id", "equalto", script.id)|first %}
-                                        <small class="text-muted">
-                                            (تم التخصيص في {{ user_script.assigned_at.strftime('%Y-%m-%d') }})
-                                        </small>
-                                    {% endif %}
-                                </label>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                        <button type="submit" class="btn btn-primary">حفظ التخصيص</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- مودال إعادة تعيين كلمة المرور للمستخدم -->
-    <div class="modal fade" id="resetUserPasswordModal{{ user.id }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">إعادة تعيين كلمة المرور - {{ user.full_name }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="{{ url_for('reset_user_password', user_id=user.id) }}" method="post">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">كلمة المرور الجديدة</label>
-                            <div class="input-group">
-                                <input type="password" class="form-control" name="password" id="userPassword{{ user.id }}" required>
-                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('userPassword{{ user.id }}')">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                        <button type="submit" class="btn btn-primary">تغيير كلمة المرور</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-{% endfor %}
+{# Removed Add User Modal for admin #}
+{# Removed Edit User, Assign Scripts, Reset User Password modals for admin (iterated ones) #}
 
 <!-- مودال إضافة سكربت جديد -->
 <div class="modal fade" id="addScriptModal" tabindex="-1">
@@ -421,138 +246,8 @@
     </div>
 </div>
 
-<!-- مودال إضافة كتاب رقمي جديد -->
-<div class="modal fade" id="addEbookModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">إضافة كتاب رقمي جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ url_for('add_ebook') }}" method="post" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">عنوان الكتاب</label>
-                                <input type="text" class="form-control" name="title" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">المؤلف</label>
-                                <input type="text" class="form-control" name="author" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">السعر</label>
-                                <input type="number" class="form-control" name="price" step="0.01" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">ملف الكتاب (PDF)</label>
-                                <input type="file" class="form-control" name="ebook_file" accept=".pdf" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">صورة الغلاف</label>
-                                <input type="file" class="form-control" name="cover_image" accept="image/*">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">الفئة</label>
-                                <select class="form-select" name="category" required>
-                                    <option value="">اختر الفئة</option>
-                                    <option value="programming">برمجة</option>
-                                    <option value="business">أعمال</option>
-                                    <option value="technology">تكنولوجيا</option>
-                                    <option value="other">أخرى</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">وصف الكتاب</label>
-                        <textarea class="form-control" name="description" rows="3" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_active" id="ebookActive" checked>
-                            <label class="form-check-label" for="ebookActive">
-                                متوفر للبيع
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">إضافة الكتاب</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- مودال إضافة قاعدة بيانات جديدة -->
-<div class="modal fade" id="addDatabaseModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">إضافة قاعدة بيانات جديدة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ url_for('add_database') }}" method="post" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">اسم قاعدة البيانات</label>
-                                <input type="text" class="form-control" name="name" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">الوصف</label>
-                                <textarea class="form-control" name="description" rows="3" required></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">السعر</label>
-                                <input type="number" class="form-control" name="price" step="0.01" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">ملف قاعدة البيانات</label>
-                                <input type="file" class="form-control" name="database_file" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">نوع قاعدة البيانات</label>
-                                <select class="form-select" name="type" required>
-                                    <option value="">اختر النوع</option>
-                                    <option value="sql">SQL</option>
-                                    <option value="nosql">NoSQL</option>
-                                    <option value="csv">CSV</option>
-                                    <option value="excel">Excel</option>
-                                    <option value="other">أخرى</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">حجم قاعدة البيانات</label>
-                                <input type="text" class="form-control" name="size" placeholder="مثال: 500MB">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_active" id="databaseActive" checked>
-                            <label class="form-check-label" for="databaseActive">
-                                متوفرة للبيع
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">إضافة قاعدة البيانات</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+{# Removed Add Ebook Modal for admin #}
+{# Removed Add Database Modal for admin #}
 
 {% block scripts %}
 <script>

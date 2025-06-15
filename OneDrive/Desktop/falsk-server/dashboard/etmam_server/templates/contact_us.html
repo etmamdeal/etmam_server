@@ -27,6 +27,7 @@
             <div class="card contact-card">
                 <div class="card-body p-4">
                     <form action="{{ url_for('main.contact_us') }}" method="POST" id="contactForm" novalidate>
+                        {{ csrf_token() }}
                         <div class="mb-4">
                             <label for="name" class="form-label">الاسم الكامل</label>
                             <input type="text" class="form-control" id="name" name="name" 

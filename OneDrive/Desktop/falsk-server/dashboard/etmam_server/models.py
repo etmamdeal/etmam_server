@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
+from flask import current_app # Added
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
+from itsdangerous import URLSafeTimedSerializer as Serializer # Added
 import json
 
 db = SQLAlchemy()
@@ -153,6 +155,20 @@ class User(UserMixin, db.Model):
         current_perms_str = kwargs.get('permissions', '[]')
         if not current_perms_str or current_perms_str == '[]':
             self.set_permissions(Role.get_default_permissions(self.role))
+
+    def get_reset_password_token(self, expires_sec=1800):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        return s.dumps({'user_id': self.id})
+
+    @staticmethod
+    def verify_reset_password_token(token, expires_sec=1800):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token, max_age=expires_sec)
+            user_id = data.get('user_id')
+        except Exception: # Catches SignatureExpired, BadTimeSignature, BadSignature, etc.
+            return None
+        return User.query.get(user_id)
 
 class RunLog(db.Model):
     __tablename__ = 'run_log'
