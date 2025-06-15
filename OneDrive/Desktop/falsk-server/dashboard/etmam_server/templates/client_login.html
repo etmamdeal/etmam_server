@@ -25,6 +25,7 @@
                     {% endwith %}
 
                     <form action="{{ url_for('main.client_login') }}" method="post" class="needs-validation" novalidate>
+                        {{ csrf_token() }}
                         <div class="mb-3">
                             <label class="form-label">اسم المستخدم</label>
                             <div class="input-group">

@@ -16,3 +16,5 @@ Flask-Principal==0.4.0
 Flask-Admin==1.6.1
 Flask-Caching==2.1.0
 Flask-DebugToolbar==0.14.1
+celery==5.3.6
+Flask-SocketIO==5.3.6

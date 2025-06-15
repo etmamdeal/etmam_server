@@ -87,9 +87,13 @@ class Config:
         """
         # إنشاء مجلدات مطلوبة
         if not os.path.exists('logs'):
-            os.mkdir('logs')
-        if not os.path.exists('uploads'):
-            os.mkdir('uploads')
+            os.makedirs('logs', exist_ok=True) # Use makedirs with exist_ok=True
+
+        # Ensure base uploads folder and scripts subfolder exist
+        base_upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
+        scripts_upload_folder = os.path.join(base_upload_folder, 'scripts')
+        os.makedirs(base_upload_folder, exist_ok=True)
+        os.makedirs(scripts_upload_folder, exist_ok=True)
             
         # إعداد التسجيل
         if not app.debug and not app.testing:

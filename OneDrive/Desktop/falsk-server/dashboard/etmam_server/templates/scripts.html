@@ -37,45 +37,53 @@
 
     <!-- Scripts Grid -->
     <div class="row" id="scriptsContainer">
-        {% for script in scripts %}
-        <div class="col-md-4 mb-4 script-item" data-category="{{ script.category }}">
-            <div class="script-card">
-                <div class="script-card-header">
-                    <div class="script-icon">
-                        <i class="fas {{ script.icon|default('fa-code') }}"></i>
+        {% if scripts and scripts|length > 0 %}
+            {% for product in scripts %} {# Renamed 'script' to 'product' for clarity, as it's a Product object #}
+            <div class="col-md-4 mb-4 script-item" data-category="{{ product.script_definition.category if product.script_definition and product.script_definition.category else 'general' }}"> {# Assuming category might be on script_definition #}
+                <div class="script-card">
+                    <div class="script-card-header">
+                        <div class="script-icon">
+                            {# Assuming icon might be on product or script_definition, defaulting to fa-code #}
+                            <i class="fas {{ product.icon or (product.script_definition.icon if product.script_definition and product.script_definition.icon else 'fa-code') }}"></i>
+                        </div>
+                        {% if product.is_featured %} {# Assuming is_featured might be a Product attribute #}
+                        <span class="badge bg-warning">مميز</span>
+                        {% endif %}
                     </div>
-                    {% if script.is_featured %}
-                    <span class="badge bg-warning">مميز</span>
-                    {% endif %}
-                </div>
-                <div class="script-card-body">
-                    <h3>{{ script.name }}</h3>
-                    <p class="script-description">{{ script.description }}</p>
-                    <div class="script-features">
-                        <span><i class="fas fa-check-circle"></i> تحديثات مجانية</span>
-                        <span><i class="fas fa-headset"></i> دعم فني</span>
-                        <span><i class="fas fa-shield-alt"></i> حماية متكاملة</span>
+                    <div class="script-card-body">
+                        <h3>{{ product.name }}</h3> {# Product.name is the display name #}
+                        <p class="script-description">{{ product.description }}</p> {# Product.description #}
+                        {# Accessing script_definition for more specific details if needed, e.g. product.script_definition.parameters #}
+                        <div class="script-features">
+                            <span><i class="fas fa-check-circle"></i> تحديثات مجانية</span>
+                            <span><i class="fas fa-headset"></i> دعم فني</span>
+                            <span><i class="fas fa-shield-alt"></i> حماية متكاملة</span>
+                        </div>
                     </div>
-                </div>
-                <div class="script-card-footer">
-                    <div class="price">{{ "%.2f"|format(script.price) }} ريال</div>
-                    <div class="subscription-options">
-                        <div class="dropdown">
-                            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                خيارات الاشتراك
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{{ url_for('request_script', script_id=script.id, period=1) }}">شهر ({{ "%.2f"|format(script.price) }} ريال)</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('request_script', script_id=script.id, period=3) }}">3 أشهر ({{ "%.2f"|format(script.price * 2.5) }} ريال)</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('request_script', script_id=script.id, period=6) }}">6 أشهر ({{ "%.2f"|format(script.price * 4.5) }} ريال)</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('request_script', script_id=script.id, period=12) }}">سنة ({{ "%.2f"|format(script.price * 8) }} ريال)</a></li>
-                            </ul>
+                    <div class="script-card-footer">
+                        <div class="price">{{ "%.2f"|format(product.price) }} ريال</div>
+                        <div class="subscription-options">
+                            <div class="dropdown">
+                                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    خيارات الاشتراك
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{{ url_for('main.request_script', script_id=product.id, period=1) }}">شهر ({{ "%.2f"|format(product.price) }} ريال)</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('main.request_script', script_id=product.id, period=3) }}">3 أشهر ({{ "%.2f"|format(product.price * 2.5) }} ريال)</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('main.request_script', script_id=product.id, period=6) }}">6 أشهر ({{ "%.2f"|format(product.price * 4.5) }} ريال)</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('main.request_script', script_id=product.id, period=12) }}">سنة ({{ "%.2f"|format(product.price * 8) }} ريال)</a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        {% endfor %}
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <p class="text-center">لا توجد سكربتات متاحة حالياً.</p>
+            </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

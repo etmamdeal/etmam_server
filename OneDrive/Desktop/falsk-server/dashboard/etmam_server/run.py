@@ -5,10 +5,16 @@
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate # Import Migrate
 from models import db, User, Script, UserScript, RunLog, Role, Permission
 from celery_app import make_celery
 from app import bp, login_manager
 from werkzeug.security import generate_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix # Import ProxyFix
+from flask_wtf.csrf import CSRFProtect # Import CSRFProtect
+
+# Global CSRFProtect instance
+csrf = CSRFProtect()
 
 def create_app():
     app = Flask(__name__)
@@ -17,6 +23,7 @@ def create_app():
     # تهيئة الإضافات
     db.init_app(app)
     login_manager.init_app(app)
+    csrf.init_app(app) # Initialize CSRF protection
     
     # تسجيل Blueprint
     app.register_blueprint(bp)
@@ -44,10 +51,16 @@ def create_app():
         else:
             print("✅ حساب السوبر أدمن موجود مسبقاً")
     
+
+    # Apply ProxyFix middleware if not in debug mode
+    if not app.config.get('DEBUG', False): # Check if DEBUG is explicitly False or not set
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
     return app
 
 app = create_app()
 celery = make_celery(app)
+migrate = Migrate(app, db) # Initialize Flask-Migrate
 
 if __name__ == '__main__':
     app.run(
