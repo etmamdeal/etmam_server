@@ -78,8 +78,18 @@
                                 </span>
                             </td>
                             <td>
-                                {# Removed user action buttons for edit, assign scripts, reset password, toggle status for admin #}
-                                لا توجد إجراءات متاحة للمشرف العادي.
+                                {% if current_user.has_permission(Permission.MANAGE_USERS) %}
+                                <form action="{{ url_for('main.manage_user_action', user_id=user.id, action='toggle_status') }}" method="POST" style="display: inline;">
+                                    {{ csrf_token() }}
+                                    <button type="submit" class="btn btn-sm btn-{{ 'danger' if user.is_active else 'success' }}"
+                                            onclick="return confirm('هل أنت متأكد من {{ 'تعطيل' if user.is_active else 'تفعيل' }} هذا المستخدم؟')"
+                                            title="{{ 'تعطيل' if user.is_active else 'تفعيل' }} المستخدم">
+                                        <i class="fas fa-{{ 'ban' if user.is_active else 'check' }}"></i>
+                                    </button>
+                                </form>
+                                {% else %}
+                                    لا توجد إجراءات متاحة.
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -155,13 +165,43 @@
                                 </td>
                                 <td>
                                     <div class="btn-group">
-                                        {# Placeholder for Edit/Delete buttons #}
-                                        <button type="button" class="btn btn-sm btn-primary" title="تعديل المنتج (غير مفعل)">
+                                        {% if current_user.is_super_admin or (product.type == ProductType.SCRIPT and current_user.has_permission(Permission.MANAGE_SCRIPTS)) %}
+                                        <a href="{{ url_for('main.edit_product', product_id=product.id) }}" class="btn btn-sm btn-primary" title="تعديل المنتج">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% else %}
+                                        <button type="button" class="btn btn-sm btn-primary" title="تعديل المنتج (غير مصرح لك)" disabled>
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-danger" title="حذف المنتج (غير مفعل)">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        {% endif %}
+
+                                        {% set can_manage_product = False %}
+                                        {% if current_user.is_super_admin %}
+                                            {% set can_manage_product = True %}
+                                        {% elif product.type == ProductType.SCRIPT and current_user.has_permission(Permission.MANAGE_SCRIPTS) %}
+                                            {% set can_manage_product = True %}
+                                        {# Add other conditions for other product types and permissions here #}
+                                        {% endif %}
+
+                                        {% if can_manage_product %}
+                                            {% if product.is_active %}
+                                            <form action="{{ url_for('main.delete_product', product_id=product.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('هل أنت متأكد من أنك تريد تحديد هذا المنتج كـ غير نشط؟ سيتم إخفاؤه من القوائم العامة.');">
+                                                {{ csrf_token() }}
+                                                <button type="submit" class="btn btn-sm btn-danger" title="تحديد المنتج كـ غير نشط">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                            {% else %}
+                                            <button type="button" class="btn btn-sm btn-secondary" title="المنتج غير نشط بالفعل" disabled>
+                                                <i class="fas fa-eye-slash"></i>
+                                            </button>
+                                            {% endif %}
+                                        {% else %}
+                                            {# Optionally show a disabled delete button if they don't have permission, or nothing #}
+                                            <button type="button" class="btn btn-sm btn-danger" title="حذف المنتج (غير مصرح لك)" disabled>
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>

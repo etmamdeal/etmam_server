@@ -302,13 +302,33 @@
                                 </td>
                                 <td>
                                     <div class="btn-group">
-                                        {# Placeholder for Edit/Delete buttons. These would need specific routes per product type or a generic one #}
-                                        <button type="button" class="btn btn-sm btn-primary" title="تعديل المنتج (غير مفعل)">
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('main.edit_product', product_id=product.id) }}" class="btn btn-sm btn-primary" title="تعديل المنتج">
                                             <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-danger" title="حذف المنتج (غير مفعل)">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        </a>
+                                        {% set can_manage_product = False %}
+                                        {% if current_user.is_super_admin %}
+                                            {% set can_manage_product = True %}
+                                        {% elif product.type == ProductType.SCRIPT and current_user.has_permission(Permission.MANAGE_SCRIPTS) %}
+                                            {% set can_manage_product = True %}
+                                        {# Add other conditions for other product types and permissions here #}
+                                        {% endif %}
+
+                                        {% if can_manage_product %}
+                                            {% if product.is_active %}
+                                            <form action="{{ url_for('main.delete_product', product_id=product.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('هل أنت متأكد من أنك تريد تحديد هذا المنتج كـ غير نشط؟ سيتم إخفاؤه من القوائم العامة.');">
+                                                {{ csrf_token() }}
+                                                <button type="submit" class="btn btn-sm btn-danger" title="تحديد المنتج كـ غير نشط">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                            {% else %}
+                                            <button type="button" class="btn btn-sm btn-secondary" title="المنتج غير نشط بالفعل" disabled>
+                                                <i class="fas fa-eye-slash"></i>
+                                            </button>
+                                            {% endif %}
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>

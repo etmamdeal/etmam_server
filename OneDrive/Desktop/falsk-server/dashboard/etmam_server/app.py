@@ -6,14 +6,15 @@
 from flask import Blueprint, Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, get_flashed_messages, abort, current_app
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
-from .forms import ResetPasswordForm # Added
+from .forms import ResetPasswordForm, ProfileForm, ChangePasswordForm, EditProductForm # Added EditProductForm
 from werkzeug.security import generate_password_hash, check_password_hash
 import werkzeug.routing.exceptions # Added for specific exception handling
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date # Added date
 from dotenv import load_dotenv
 import io
+# Removed duplicate dotenv and io imports
 import contextlib
-import json
+import json # json is already imported, ensure it's here
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -509,7 +510,8 @@ def admin_dashboard():
                 'admin_dashboard.html',
                 users=users,
                 all_products=all_products, # Pass all products
-                ProductType=ProductType # Pass ProductType class for template usage
+                ProductType=ProductType, # Pass ProductType class for template usage
+                Permission=Permission # Pass Permission class for template usage
             )
         except werkzeug.routing.exceptions.BuildError as e:
             if 'toggle_user_status' in str(e):
@@ -563,6 +565,72 @@ def client_dashboard():
 
     return render_template('client_dashboard.html', stats=stats, recent_operations=recent_operations, now=datetime.utcnow())
 
+@bp.route('/client/my-scripts', endpoint='client_my_scripts')
+@login_required
+@client_required
+def client_my_scripts():
+    user_scripts_data = db.session.query(UserScript, Script, Product)\
+        .join(Script, UserScript.script_id == Script.id)\
+        .join(Product, Script.id == Product.script_id)\
+        .filter(UserScript.user_id == current_user.id)\
+        .filter(Product.type == ProductType.SCRIPT)\
+        .all()
+
+    # user_scripts_data will be a list of tuples (user_script_obj, script_obj, product_obj)
+    # It's better to pass it as is, or structure it into a list of dicts if preferred by template complexity.
+
+    return render_template('client/my_scripts.html', user_scripts_data=user_scripts_data, now=datetime.utcnow())
+
+@bp.route('/client/my-logs', endpoint='client_my_logs')
+@login_required
+@client_required
+def client_my_logs():
+    page = request.args.get('page', 1, type=int)
+    # Querying RunLog and labeling Script.name as 'script_name'
+    logs_pagination = db.session.query(RunLog, Script.name.label('script_name'))\
+        .join(Script, RunLog.script_id == Script.id)\
+        .filter(RunLog.user_id == current_user.id)\
+        .order_by(RunLog.executed_at.desc())\
+        .paginate(page=page, per_page=10, error_out=False)
+
+    # logs_pagination.items will be a list of tuples (run_log_obj, script_name_str)
+    return render_template('client/my_logs.html', logs_pagination=logs_pagination, now=datetime.utcnow())
+
+@bp.route('/client/profile', methods=['GET', 'POST'], endpoint='client_profile')
+@login_required
+@client_required
+def client_profile():
+    profile_form = ProfileForm(obj=current_user) # Pre-populate with current_user data
+    password_form = ChangePasswordForm()
+
+    # Check which form was submitted using the submit button's name
+    if 'submit_profile' in request.form and profile_form.validate_on_submit():
+        current_user.full_name = profile_form.full_name.data
+        current_user.email = profile_form.email.data
+        current_user.phone = profile_form.phone.data
+        try:
+            db.session.commit()
+            flash('تم تحديث بيانات ملفك الشخصي بنجاح!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating profile for {current_user.username}: {str(e)}")
+            flash('حدث خطأ أثناء تحديث الملف الشخصي. قد يكون البريد الإلكتروني مستخدماً.', 'danger')
+        return redirect(url_for('main.client_profile'))
+
+    if 'submit_password' in request.form and password_form.validate_on_submit():
+        # The form already validates current_password and that new_password matches confirm_new_password
+        current_user.password = generate_password_hash(password_form.new_password.data)
+        try:
+            db.session.commit()
+            flash('تم تغيير كلمة المرور بنجاح!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error changing password for {current_user.username}: {str(e)}")
+            flash('حدث خطأ أثناء تغيير كلمة المرور.', 'danger')
+        return redirect(url_for('main.client_profile'))
+
+    return render_template('client/profile.html', profile_form=profile_form, password_form=password_form, now=datetime.utcnow())
+
 @bp.route('/manage_users')
 @login_required
 def manage_users():
@@ -581,15 +649,61 @@ def manage_user_action(user_id, action):
         return redirect(url_for('main.homepage'))
     
     try:
-        # ... existing code ...
-        return redirect(url_for('main.manage_users'))
+        target_user = User.query.get_or_404(user_id)
+
+        # Permission check: Allow if super_admin, or if admin and has MANAGE_USERS permission
+        if not current_user.is_super_admin:
+            if not (current_user.is_admin and current_user.has_permission(Permission.MANAGE_USERS)):
+                flash("ليس لديك الصلاحية الكافية للقيام بهذا الإجراء.", "danger")
+                # Redirect to where the admin usually manages users or a general dashboard
+                return redirect(url_for('main.admin_dashboard'))
+
+        if action == 'toggle_status':
+            if request.method == 'POST':
+                # Regular admins can only manage regular users. Super admins can manage anyone not themselves (super_admin).
+                if not current_user.is_super_admin and target_user.role != Role.USER:
+                    flash("لا يمكنك تعديل حالة هذا المستخدم.", "warning")
+                    return redirect(url_for('main.admin_dashboard'))
+
+                # Super admins cannot deactivate other super admins through this route (should use specific super_admin tools if any)
+                # and cannot deactivate themselves. Regular admins cannot deactivate admins/super_admins.
+                if target_user.role == Role.SUPER_ADMIN:
+                    flash("لا يمكن تعديل حالة حساب سوبر أدمن آخر من هنا.", "danger")
+                    return redirect(url_for('main.admin_dashboard'))
+
+                if target_user.id == current_user.id:
+                    flash("لا يمكنك تغيير حالتك الخاصة.", "warning")
+                    return redirect(url_for('main.admin_dashboard'))
+
+                target_user.is_active = not target_user.is_active
+                db.session.commit()
+                flash(f"تم {'تفعيل' if target_user.is_active else 'تعطيل'} حساب المستخدم {target_user.username} بنجاح.", "success")
+            else: # GET request for toggle_status
+                flash("الإجراء غير صالح. يجب أن يتم عبر POST.", "warning")
+
+            # Determine redirect based on who is performing action
+            if current_user.is_super_admin:
+                # Super admin might be managing users from their main dashboard or a dedicated user list
+                # For now, assume they go back to their main dashboard.
+                # If there's a specific user list page they use, redirect there.
+                return redirect(url_for('main.super_admin_dashboard'))
+            else: # Regular admin
+                 # Regular admins manage users from their admin_dashboard (which lists users)
+                return redirect(url_for('main.admin_dashboard'))
+
+        # Fallback for other actions or if action is not 'toggle_status'
+        # flash(f"Action '{action}' not fully implemented for user {target_user.username}.", "info")
+        if current_user.is_super_admin:
+            return redirect(url_for('main.super_admin_dashboard'))
+        return redirect(url_for('main.admin_dashboard'))
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"خطأ في تحديث حالة المستخدم: {str(e)}")
         flash("حدث خطأ أثناء تحديث حالة المستخدم", "danger")
         return redirect(url_for('main.manage_users'))
 
-# حذف سطر تسجيل Blueprint لأنه يتم في run.py
+# --- End of Admin User Management (for regular admins, if any) ---
 
 
 # Admin route to add a new script
@@ -922,6 +1036,111 @@ def toggle_admin_status(admin_id):
     status_message = "مفعل" if admin_to_toggle.is_active else "معطل"
     flash(f'تم تغيير حالة المشرف {admin_to_toggle.username} إلى {status_message} بنجاح.', 'success')
     return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/admin/product/<int:product_id>/edit', methods=['GET', 'POST'], endpoint='edit_product')
+@login_required
+@admin_required # Using general admin_required, specific permission check inside
+def edit_product(product_id):
+    product = Product.query.get_or_404(product_id)
+
+    # Permission check: Super_admin can edit any. Admin needs MANAGE_SCRIPTS for script products.
+    if not current_user.is_super_admin:
+        if product.type == ProductType.SCRIPT and not current_user.has_permission(Permission.MANAGE_SCRIPTS):
+            flash("ليس لديك الصلاحية لتعديل هذا المنتج (السكربت).", "danger")
+            return redirect(url_for('main.admin_dashboard'))
+        # Add elif for other product types and their specific permissions if needed
+        # elif product.type == ProductType.EBOOK and not current_user.has_permission(Permission.MANAGE_EBOOKS):
+        #     flash("You do not have permission to edit this ebook product.", "danger")
+        #     return redirect(url_for('main.admin_dashboard'))
+        elif product.type != ProductType.SCRIPT: # For now, only allow script editing by non-super-admins if they have MANAGE_SCRIPTS
+             flash(f"ليس لديك صلاحية تعديل هذا النوع من المنتجات ('{product.type}').", "warning")
+             return redirect(url_for('main.admin_dashboard'))
+
+
+    form = EditProductForm(obj=product)
+    # Populate script_parameters for script products on GET request
+    if request.method == 'GET' and product.type == ProductType.SCRIPT:
+        if product.script_definition and product.script_definition.parameters:
+            try:
+                form.script_parameters.data = json.dumps(product.script_definition.parameters, indent=2, ensure_ascii=False)
+            except TypeError: # handle cases where parameters might not be serializable directly
+                 form.script_parameters.data = "{}" # Default to empty JSON string
+                 flash("لم يتمكن من تحميل معلمات السكربت بشكل صحيح، قد تكون غير مهيأة.", "warning")
+
+
+    if form.validate_on_submit():
+        product.name = form.name.data
+        product.description = form.description.data
+        product.price = form.price.data
+        product.is_active = form.is_active.data
+        product.last_modified_by = current_user.id
+        product.last_modified = datetime.utcnow()
+
+        if product.type == ProductType.SCRIPT and product.script_definition:
+            if form.script_parameters.data and form.script_parameters.data.strip():
+                try:
+                    product.script_definition.parameters = json.loads(form.script_parameters.data)
+                except json.JSONDecodeError:
+                    # Error is handled by form validator, but we can flash again or log
+                    flash("صيغة JSON لمعلمات السكربت غير صحيحة. لم يتم تحديث المعلمات.", "danger")
+            else:
+                product.script_definition.parameters = {} # Store empty JSON object
+
+        try:
+            db.session.commit()
+            flash(f'تم تحديث المنتج "{product.name}" بنجاح!', 'success')
+            if current_user.is_super_admin:
+                return redirect(url_for('main.super_admin_dashboard'))
+            return redirect(url_for('main.admin_dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating product {product.name}: {str(e)}")
+            flash(f'خطأ أثناء تحديث المنتج: {str(e)}', 'danger')
+
+    # If form validation failed, errors will be in form.errors and displayed in template
+    return render_template('admin/edit_product.html', form=form, product=product, ProductType=ProductType, now=datetime.utcnow())
+
+@bp.route('/admin/product/<int:product_id>/delete', methods=['POST'], endpoint='delete_product')
+@login_required
+@admin_required # Base protection, more specific checks inside
+def delete_product(product_id):
+    product = Product.query.get_or_404(product_id)
+
+    # Permission check: Super_admin can "delete" any.
+    # Admin needs MANAGE_SCRIPTS for script products.
+    can_delete = False
+    if current_user.is_super_admin:
+        can_delete = True
+    elif product.type == ProductType.SCRIPT and current_user.has_permission(Permission.MANAGE_SCRIPTS):
+        can_delete = True
+    # Add elif for other product types and their specific "manage" permissions if they exist/are added
+    # Example:
+    # elif product.type == ProductType.EBOOK and current_user.has_permission(Permission.MANAGE_EBOOKS):
+    #    can_delete = True
+
+    if not can_delete:
+        flash("ليس لديك الصلاحية لحذف هذا المنتج.", "danger")
+        if current_user.is_super_admin:
+             return redirect(url_for('main.super_admin_dashboard'))
+        return redirect(url_for('main.admin_dashboard'))
+
+    if not product.is_active:
+        flash(f'المنتج "{product.name}" هو بالفعل غير نشط.', 'info')
+    else:
+        product.is_active = False
+        product.last_modified_by = current_user.id
+        product.last_modified = datetime.utcnow()
+        try:
+            db.session.commit()
+            flash(f'تم تحديد المنتج "{product.name}" كـغير نشط وتم إخفاؤه من القوائم العامة.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error deactivating product {product.name}: {str(e)}")
+            flash(f'خطأ في إلغاء تنشيط المنتج: {str(e)}', 'danger')
+
+    if current_user.is_super_admin:
+        return redirect(url_for('main.super_admin_dashboard'))
+    return redirect(url_for('main.admin_dashboard'))
 
 # User Management by Super Admin
 
