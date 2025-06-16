@@ -6,7 +6,7 @@
 from flask import Blueprint, Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, get_flashed_messages, abort, current_app
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
-from .forms import ResetPasswordForm, ProfileForm, ChangePasswordForm, EditProductForm # Added EditProductForm
+from .forms import ResetPasswordForm, ProfileForm, ChangePasswordForm, EditProductForm, PropertyForm # Added PropertyForm
 from werkzeug.security import generate_password_hash, check_password_hash
 import werkzeug.routing.exceptions # Added for specific exception handling
 from datetime import datetime, timedelta, date # Added date
@@ -529,41 +529,37 @@ def admin_dashboard():
         flash("حدث خطأ أثناء تحميل لوحة التحكم", "danger")
         return redirect(url_for('main.homepage'))
 
-@bp.route('/client')
-@client_required
+@bp.route('/client', endpoint='client_dashboard') # Assuming this is being repurposed
+@login_required
+@client_required # Ensure this decorator is appropriate for brokers, or a new one is needed.
 def client_dashboard():
-    # Calculate statistics for the client dashboard
-    user_id = current_user.id
+    # Stats for Real Estate Broker
+    total_properties = Property.query.filter_by(user_id=current_user.id).count()
 
-    # Active scripts: Count of UserScript entries for the current_user
-    active_scripts_count = UserScript.query.filter_by(user_id=user_id).count() # Assuming UserScript implies active/assigned
+    # Placeholder stats for deals until deal management is implemented
+    # Corrected querying for deals (assuming Deal model is available and user_id links to the broker)
+    deals_in_progress_count = Deal.query.filter(Deal.user_id == current_user.id, Deal.stage.notin_(['Closed - Won', 'Closed - Lost'])).count() if db.inspect(Deal).has_table() else 0
+    completed_deals_count = Deal.query.filter(Deal.user_id == current_user.id, Deal.stage == 'Closed - Won').count() if db.inspect(Deal).has_table() else 0
 
-    # Today's operations: Count of RunLog entries for the current_user created today
-    today_start = datetime.combine(date.today(), datetime.min.time())
-    today_end = datetime.combine(date.today(), datetime.max.time())
-    today_operations_count = RunLog.query.filter(
-        RunLog.user_id == user_id,
-        RunLog.executed_at >= today_start,
-        RunLog.executed_at <= today_end
-    ).count()
+    # Placeholder for revenue estimation - this requires a field like 'deal_value' or 'commission_amount' on the Deal model
+    # For now, let's assume it's based on property price of 'Closed - Won' deals if no specific value field.
+    # This is highly speculative and needs a proper field in Deal model.
+    revenue_estimation = db.session.query(db.func.sum(Property.price)).join(Deal, Deal.property_id == Property.id).filter(Deal.user_id == current_user.id, Deal.stage == 'Closed - Won').scalar() or 0.0 if db.inspect(Deal).has_table() else 0.0
 
-    # Successful operations: Count of RunLog entries for the current_user with status == 'success'
-    # Assuming 'success' is the indicator. Adjust if it's different (e.g., 'completed')
-    successful_operations_count = RunLog.query.filter_by(user_id=user_id, status='success').count()
-                                                                        # Make sure 'success' is the correct status string
 
-    # Recent operations: A list of the last 5-10 RunLog entries for the current_user
-    recent_operations = RunLog.query.filter_by(user_id=user_id)\
-                                    .order_by(RunLog.executed_at.desc())\
-                                    .limit(5).all() # Fetching last 5, can be adjusted
+    # Placeholder for recent activity - for now, just fetch last 5 properties added by user
+    recent_activities = Property.query.filter_by(user_id=current_user.id)\
+                                  .order_by(Property.created_at.desc())\
+                                  .limit(5).all()
 
-    stats = {
-        'active_scripts': active_scripts_count,
-        'today_operations': today_operations_count,
-        'successful_operations': successful_operations_count,
-    }
-
-    return render_template('client_dashboard.html', stats=stats, recent_operations=recent_operations, now=datetime.utcnow())
+    return render_template('client/dashboard.html', # Changed template path
+                                   total_properties=total_properties,
+                                   deals_in_progress_count=deals_in_progress_count,
+                                   completed_deals_count=completed_deals_count,
+                                   revenue_estimation=revenue_estimation,
+                                   recent_activities=recent_activities,
+                                   now=datetime.utcnow() # Added now
+                                  )
 
 @bp.route('/client/my-scripts', endpoint='client_my_scripts')
 @login_required
@@ -630,6 +626,200 @@ def client_profile():
         return redirect(url_for('main.client_profile'))
 
     return render_template('client/profile.html', profile_form=profile_form, password_form=password_form, now=datetime.utcnow())
+
+@bp.route('/client/properties/map', methods=['GET'], endpoint='client_add_property_map')
+@login_required
+@client_required
+def client_add_property_map():
+    user_properties = Property.query.filter_by(user_id=current_user.id).all()
+    # Convert properties to a JSON string to be easily embedded in the template for JavaScript
+    properties_data = []
+    for prop in user_properties:
+        properties_data.append({
+            "title": prop.title,
+            "lat": prop.latitude,
+            "lng": prop.longitude,
+            "type": prop.type,
+            "price": prop.price,
+            "url": "#" # Placeholder for url_for('main.client_edit_property', property_id=prop.id)
+        })
+    properties_json = json.dumps(properties_data)
+    form = PropertyForm() # Instantiate the form for the modal
+    return render_template('client/property_map.html', properties_json=properties_json, form=form, now=datetime.utcnow())
+
+@bp.route('/client/properties/add', methods=['POST'], endpoint='client_add_property')
+@login_required
+@client_required
+def client_add_property():
+    form = PropertyForm(request.form) # Pass request.form explicitly for non-AJAX POST with separate hidden fields
+    latitude = request.form.get('latitude', type=float)
+    longitude = request.form.get('longitude', type=float)
+
+    if not latitude or not longitude:
+        flash('الموقع (خط العرض وخط الطول) مطلوب. يرجى تحديد نقطة على الخريطة.', 'danger')
+        return redirect(url_for('main.client_add_property_map'))
+
+    if form.validate(): # validate_on_submit() might not work as expected if lat/lng are not part of the WTForm class
+        try:
+            new_property = Property(
+                user_id=current_user.id,
+                title=form.title.data,
+                type=form.type.data,
+                price=form.price.data,
+                area=form.area.data,
+                rooms=form.rooms.data,
+                description=form.description.data,
+                latitude=latitude,
+                longitude=longitude
+                # created_at and updated_at have defaults
+            )
+            db.session.add(new_property)
+            db.session.commit()
+            flash(f'تمت إضافة العقار "{new_property.title}" بنجاح!', 'success')
+            return redirect(url_for('main.client_add_property_map')) # Redirect back to map, new property will show
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error adding property: {str(e)}")
+            flash('حدث خطأ أثناء إضافة العقار. يرجى المحاولة مرة أخرى.', 'danger')
+    else:
+        # Collect WTForm errors and flash them
+        error_messages = []
+        for field, errors in form.errors.items():
+            for error in errors:
+                error_messages.append(f"{getattr(form, field).label.text}: {error}")
+        if error_messages: # Flash only if there are actual form validation errors
+             flash("فشل التحقق من النموذج: " + "؛ ".join(error_messages), 'danger')
+
+    # If validation fails or other issues, redirect back to the map page.
+    # User will lose modal state and data in hidden fields if not handled by JS to repopulate,
+    # but form data submitted would be lost anyway on a simple redirect.
+    # Flashed messages will be displayed on the map page.
+    return redirect(url_for('main.client_add_property_map'))
+
+@bp.route('/client/properties', methods=['GET'], endpoint='client_manage_properties')
+@login_required
+@client_required
+def client_manage_properties():
+    page = request.args.get('page', 1, type=int)
+    property_type_filter = request.args.get('type_filter', None)
+
+    query = Property.query.filter_by(user_id=current_user.id)
+    if property_type_filter and property_type_filter != 'all' and property_type_filter != '':
+        query = query.filter(Property.type == property_type_filter)
+
+    properties_pagination = query.order_by(Property.created_at.desc()).paginate(page=page, per_page=10, error_out=False)
+
+    # Get distinct property types for filter dropdown, ensuring they are not None or empty
+    distinct_types_query = db.session.query(Property.type)\
+        .filter(Property.user_id == current_user.id, Property.type.isnot(None), Property.type != '')\
+        .distinct().all()
+    available_types = [ptype[0] for ptype in distinct_types_query]
+
+    return render_template('client/property_list.html',
+                           properties_pagination=properties_pagination,
+                           available_types=available_types,
+                           current_type_filter=property_type_filter if property_type_filter else 'all', # ensure 'all' is default if None
+                           now=datetime.utcnow())
+
+@bp.route('/client/properties/<int:property_id>/edit', methods=['GET', 'POST'], endpoint='client_edit_property')
+@login_required
+@client_required
+def client_edit_property(property_id):
+    property_to_edit = Property.query.filter_by(id=property_id, user_id=current_user.id).first_or_404()
+    form = PropertyForm(obj=property_to_edit) # Pre-populate form with existing data
+
+    original_lat = property_to_edit.latitude
+    original_lng = property_to_edit.longitude
+
+    if form.validate_on_submit(): # This will be true for POST requests if form data is valid
+        try:
+            property_to_edit.title = form.title.data
+            property_to_edit.type = form.type.data
+            property_to_edit.price = form.price.data
+            property_to_edit.area = form.area.data
+            property_to_edit.rooms = form.rooms.data
+            property_to_edit.description = form.description.data
+
+            # Get lat/lng from hidden fields in the form for potential re-positioning
+            new_latitude = request.form.get('latitude', type=float)
+            new_longitude = request.form.get('longitude', type=float)
+
+            if new_latitude and new_longitude:
+                property_to_edit.latitude = new_latitude
+                property_to_edit.longitude = new_longitude
+
+            property_to_edit.updated_at = datetime.utcnow() # Manually set updated_at
+            db.session.commit()
+            flash(f'تم تحديث العقار "{property_to_edit.title}" بنجاح!', 'success')
+            return redirect(url_for('main.client_manage_properties'))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error editing property {property_id}: {str(e)}")
+            flash('حدث خطأ أثناء تحديث العقار. يرجى المحاولة مرة أخرى.', 'danger')
+
+    # For GET requests, or if form validation failed on POST:
+    # Pass original coordinates for map centering.
+    # The form object (form) will contain submitted values and errors if validation failed.
+    # Ensure hidden fields in template are populated with these values for JS to pick up on load.
+    if request.method == 'POST' and not form.validate(): # If POST failed validation
+        # Keep submitted values for hidden fields if they exist, else use original
+        current_lat_for_map = request.form.get('latitude', original_lat, type=float)
+        current_lng_for_map = request.form.get('longitude', original_lng, type=float)
+        flash('الرجاء تصحيح الأخطاء في النموذج.', 'danger')
+    else: # For GET requests
+        current_lat_for_map = original_lat
+        current_lng_for_map = original_lng
+
+
+    return render_template('client/edit_property.html',
+                           form=form,
+                           property_id=property_id,
+                           property_title=property_to_edit.title,
+                           current_lat=current_lat_for_map,
+                           current_lng=current_lng_for_map,
+                           now=datetime.utcnow())
+
+@bp.route('/client/properties/<int:property_id>/delete', methods=['POST'], endpoint='client_delete_property')
+@login_required
+@client_required
+def client_delete_property(property_id):
+    property_to_delete = Property.query.filter_by(id=property_id, user_id=current_user.id).first_or_404()
+
+    try:
+        # Note: If Deal model has property_id as ForeignKey without ondelete='CASCADE',
+        # and related deals exist, this will fail.
+        # For now, proceeding with direct delete as per subtask instructions.
+        # Example: Deal.query.filter_by(property_id=property_to_delete.id, user_id=current_user.id).delete()
+
+        # Check for related deals and prevent deletion if they exist, or handle them.
+        # This check assumes Deal model is imported and has a 'property_id' field.
+        if hasattr(Deal, 'query') and Deal.query.filter_by(property_id=property_to_delete.id).first():
+            flash(f'لا يمكن حذف العقار "{property_to_delete.title}" لأنه مرتبط بصفقات حالية. يرجى التعامل مع الصفقات أولاً.', 'danger')
+            return redirect(url_for('main.client_manage_properties'))
+
+        db.session.delete(property_to_delete)
+        db.session.commit()
+        flash(f'تم حذف العقار "{property_to_delete.title}" بنجاح.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting property {property_id}: {str(e)}")
+        flash('حدث خطأ أثناء حذف العقار. يرجى المحاولة مرة أخرى.', 'danger')
+
+    return redirect(url_for('main.client_manage_properties'))
+
+@bp.route('/client/marketing-tools', methods=['GET'], endpoint='client_marketing_tools')
+@login_required
+@client_required
+def client_marketing_tools():
+    # This page might have dynamic elements in the future, but for now, it's static content.
+    return render_template('client/marketing_tools.html', now=datetime.utcnow())
+
+@bp.route('/client/resources', methods=['GET'], endpoint='client_resources')
+@login_required
+@client_required
+def client_resources():
+    # Similar to marketing tools, this page is initially static.
+    return render_template('client/resources.html', now=datetime.utcnow())
 
 @bp.route('/manage_users')
 @login_required

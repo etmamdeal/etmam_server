@@ -331,3 +331,45 @@ class TicketAttachment(db.Model):
 
     def __repr__(self):
         return f'<TicketAttachment {self.id} - {self.original_filename}>'
+
+# New Real Estate Broker Models
+
+class Property(db.Model):
+    __tablename__ = 'properties' # Changed from 'property' to 'properties'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False) # Assumes 'users' table
+    title = db.Column(db.String(200), nullable=False)
+    type = db.Column(db.String(50), nullable=False) # E.g., 'Residential', 'Commercial', 'Land'
+    price = db.Column(db.Float, nullable=False) # Consider db.Numeric for precision if DB supports well
+    area = db.Column(db.Float, nullable=True) # Square meters
+    rooms = db.Column(db.Integer, nullable=True) # Number of rooms, applicable for some types
+    description = db.Column(db.Text, nullable=True)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    # user = db.relationship('User', backref=db.backref('properties', lazy=True)) # If needed
+    # deals = db.relationship('Deal', backref='property', lazy='dynamic', cascade='all, delete-orphan') # If needed
+
+    def __repr__(self):
+        return f'<Property {self.id}: {self.title}>'
+
+class Deal(db.Model):
+    __tablename__ = 'deals'
+    id = db.Column(db.Integer, primary_key=True)
+    property_id = db.Column(db.Integer, db.ForeignKey('properties.id'), nullable=False) # Changed from 'property.id'
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False) # Broker/agent owning the deal
+    client_name = db.Column(db.String(120), nullable=True) # Name of the end client (buyer/renter)
+    stage = db.Column(db.String(50), nullable=False, default='New Lead') # E.g., 'New Lead', 'Negotiation', 'Closed'
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    # property_deal = db.relationship('Property', backref=db.backref('property_deals', lazy=True, uselist=False)) # Changed backref name
+    # user_deal = db.relationship('User', backref=db.backref('user_deals', lazy=True)) # Changed backref name
+
+    def __repr__(self):
+        return f'<Deal {self.id} for Property {self.property_id}>'
