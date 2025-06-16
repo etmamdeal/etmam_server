@@ -175,15 +175,25 @@ class RunLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     script_id = db.Column(db.Integer, db.ForeignKey('scripts.id', name='fk_runlog_script'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', name='fk_runlog_user'), nullable=False)
-    status = db.Column(db.String(20), nullable=False)
+
+    # Link to UserScript if this specific assignment's execution is being logged
+    user_script_id = db.Column(db.Integer, db.ForeignKey('user_script.id'), nullable=False) # Kept as nullable=False
+
+    status = db.Column(db.String(20), nullable=False)  # e.g., 'success', 'error', 'timeout'
+
+    input_parameters = db.Column(db.Text, nullable=True) # To store JSON string of input params
+
     output = db.Column(db.Text, nullable=True)
     error = db.Column(db.Text, nullable=True)
-    executed_at = db.Column(db.DateTime, default=datetime.now)
-    user_script_id = db.Column(db.Integer, db.ForeignKey('user_script.id'), nullable=False)
+    executed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False) # Changed default to utcnow, added nullable=False
 
+    # Relationships
     user = db.relationship('User', backref=db.backref('run_logs', cascade="all, delete-orphan"))
-    script = db.relationship('Script', backref=db.backref('run_logs', cascade="all, delete-orphan"))
+    script = db.relationship('Script', backref=db.backref('script_run_logs', cascade="all, delete-orphan")) # Renamed backref
     user_script = db.relationship('UserScript', backref=db.backref('run_logs', cascade="all, delete-orphan"), foreign_keys=[user_script_id])
+
+    def __repr__(self):
+        return f'<RunLog {self.id} for Script {self.script_id} by User {self.user_id} at {self.executed_at}>'
 
 class ProductType:
     SCRIPT = 'script'
@@ -331,3 +341,45 @@ class TicketAttachment(db.Model):
 
     def __repr__(self):
         return f'<TicketAttachment {self.id} - {self.original_filename}>'
+
+# New Real Estate Broker Models
+
+class Property(db.Model):
+    __tablename__ = 'properties' # Changed from 'property' to 'properties'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False) # Assumes 'users' table
+    title = db.Column(db.String(200), nullable=False)
+    type = db.Column(db.String(50), nullable=False) # E.g., 'Residential', 'Commercial', 'Land'
+    price = db.Column(db.Float, nullable=False) # Consider db.Numeric for precision if DB supports well
+    area = db.Column(db.Float, nullable=True) # Square meters
+    rooms = db.Column(db.Integer, nullable=True) # Number of rooms, applicable for some types
+    description = db.Column(db.Text, nullable=True)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    # user = db.relationship('User', backref=db.backref('properties', lazy=True)) # If needed
+    # deals = db.relationship('Deal', backref='property', lazy='dynamic', cascade='all, delete-orphan') # If needed
+
+    def __repr__(self):
+        return f'<Property {self.id}: {self.title}>'
+
+class Deal(db.Model):
+    __tablename__ = 'deals'
+    id = db.Column(db.Integer, primary_key=True)
+    property_id = db.Column(db.Integer, db.ForeignKey('properties.id'), nullable=False) # Changed from 'property.id'
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False) # Broker/agent owning the deal
+    client_name = db.Column(db.String(120), nullable=True) # Name of the end client (buyer/renter)
+    stage = db.Column(db.String(50), nullable=False, default='New Lead') # E.g., 'New Lead', 'Negotiation', 'Closed'
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    # property_deal = db.relationship('Property', backref=db.backref('property_deals', lazy=True, uselist=False)) # Changed backref name
+    # user_deal = db.relationship('User', backref=db.backref('user_deals', lazy=True)) # Changed backref name
+
+    def __repr__(self):
+        return f'<Deal {self.id} for Property {self.property_id}>'

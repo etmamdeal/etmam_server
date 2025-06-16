@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة تحكم الوسيط العقاري - منصة إتمام{% endblock %}
+
+{% block styles %}
+<style>
+    .stat-card {
+        background-color: #fff;
+        border-radius: .5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+    .stat-card i {
+        font-size: 2rem;
+        margin-bottom: .5rem;
+        color: var(--primary-color);
+    }
+    .stat-card h5 {
+        font-size: 1rem;
+        color: #6c757d;
+        margin-bottom: .25rem;
+    }
+    .stat-card h2 {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+    .quick-action-card {
+        background-color: #fff;
+        border-radius: .5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        text-align: center;
+        transition: transform .2s ease-in-out, box-shadow .2s ease-in-out;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .quick-action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.12);
+    }
+    .quick-action-card i {
+        font-size: 2.5rem; /* Larger icons for quick actions */
+        margin-bottom: 1rem; /* More space below icon */
+        color: var(--primary-color);
+    }
+     .quick-action-card p {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #343a40;
+        margin-bottom: 0;
+    }
+    .activity-feed .list-group-item {
+        border-right: 0;
+        border-left: 0;
+        padding: 1rem 1.25rem;
+    }
+    .activity-feed .list-group-item:first-child {
+        border-top-left-radius: .5rem;
+        border-top-right-radius: .5rem;
+        border-top: 0;
+    }
+    .activity-feed .list-group-item:last-child {
+        border-bottom-left-radius: .5rem;
+        border-bottom-right-radius: .5rem;
+        border-bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>لوحة تحكم الوسيط العقاري</h2>
+        {# Optional: Add a general settings or main page link if different from profile #}
+    </div>
+     <p class="text-muted mb-4">مرحباً بك، {{ current_user.full_name }}! هنا يمكنك إدارة ممتلكاتك وعملياتك العقارية.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Summary Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <i class="fas fa-home"></i>
+                <h5>إجمالي العقارات</h5>
+                <h2>{{ total_properties|default(0) }}</h2>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <i class="fas fa-tasks"></i>
+                <h5>الصفقات قيد التنفيذ</h5>
+                <h2>{{ deals_in_progress_count|default(0) }}</h2>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <i class="fas fa-check-circle"></i>
+                <h5>الصفقات المكتملة</h5>
+                <h2>{{ completed_deals_count|default(0) }}</h2>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <i class="fas fa-wallet"></i>
+                <h5>تقدير الإيرادات</h5>
+                <h2>{{ "%.2f"|format(revenue_estimation|default(0.0)) }} <small>ر.س</small></h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Access Cards -->
+    <h4 class="mb-3 mt-5">إجراءات سريعة</h4>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4 col-lg-3">
+            <a href="{{ url_for('main.client_add_property_map') }}" class="text-decoration-none d-block">
+                <div class="quick-action-card">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <p>إضافة عقار جديد (خريطة)</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4 col-lg-3">
+            <a href="{{ url_for('main.client_manage_properties') }}" class="text-decoration-none d-block">
+                <div class="quick-action-card">
+                    <i class="fas fa-building"></i>
+                    <p>إدارة العقارات</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4 col-lg-3">
+            <a href="{{ url_for('main.client_marketing_tools') }}" class="text-decoration-none d-block">
+                <div class="quick-action-card">
+                    <i class="fas fa-bullhorn"></i>
+                    <p>أدوات التسويق</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4 col-lg-3">
+            <a href="{{ url_for('main.client_deal_tracker') }}" class="text-decoration-none d-block">
+                <div class="quick-action-card">
+                    <i class="fas fa-handshake"></i>
+                    <p>متتبع الصفقات</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4 col-lg-3">
+            <a href="{{ url_for('main.client_resources') }}" class="text-decoration-none d-block">
+                <div class="quick-action-card">
+                    <i class="fas fa-book-open"></i>
+                    <p>سكربتات وموارد البيع</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Links to Etmam platform features for the broker themself -->
+    <h4 class="mb-3 mt-5">أدوات منصة إتمام الخاصة بي</h4>
+     <div class="row g-3 mb-4">
+        <div class="col-md-4 col-lg-3">
+            <a href="{{ url_for('main.client_my_scripts') }}" class="text-decoration-none d-block">
+                <div class="quick-action-card">
+                    <i class="fas fa-code text-secondary"></i>
+                    <p>سكربتات المنصة الخاصة بي</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4 col-lg-3">
+            <a href="{{ url_for('main.client_my_logs') }}" class="text-decoration-none d-block">
+                <div class="quick-action-card">
+                    <i class="fas fa-history text-secondary"></i>
+                    <p>سجل عمليات المنصة</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4 col-lg-3">
+            <a href="{{ url_for('main.client_profile') }}" class="text-decoration-none d-block">
+                <div class="quick-action-card">
+                    <i class="fas fa-user-cog text-secondary"></i>
+                    <p>ملفي الشخصي بالمنصة</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <h4 class="mb-3 mt-5">آخر الأنشطة العقارية</h4>
+    <div class="card shadow-sm border-0 activity-feed">
+        <div class="card-body">
+            {% if recent_activities %}
+                <ul class="list-group list-group-flush">
+                {% for activity_property in recent_activities %} {# Changed loop variable name #}
+                    <li class="list-group-item">
+                        <i class="fas fa-home text-muted me-2"></i>
+                        تمت إضافة عقار جديد: <strong>{{ activity_property.title }}</strong>
+                        <span class="text-muted small float-end">{{ activity_property.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted text-center p-3">لا توجد أنشطة حديثة.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

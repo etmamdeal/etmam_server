@@ -6,11 +6,12 @@
 from flask import Blueprint, Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, get_flashed_messages, abort, current_app
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
-from .forms import ResetPasswordForm, ProfileForm, ChangePasswordForm, EditProductForm # Added EditProductForm
+from .forms import ResetPasswordForm, ProfileForm, ChangePasswordForm, EditProductForm, PropertyForm, DealForm, DEAL_STAGES # Added DealForm and DEAL_STAGES
 from werkzeug.security import generate_password_hash, check_password_hash
 import werkzeug.routing.exceptions # Added for specific exception handling
 from datetime import datetime, timedelta, date # Added date
 from dotenv import load_dotenv
+from collections import OrderedDict # For ordered columns in deal pipeline
 import io
 # Removed duplicate dotenv and io imports
 import contextlib
@@ -21,9 +22,101 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from werkzeug.utils import secure_filename
 from functools import wraps
+import subprocess # For execute_python_script
+import sys # For execute_python_script
+import os # For execute_python_script, path operations
 
 # تحميل متغيرات البيئة من ملف .env
 load_dotenv()
+
+# Helper function for script execution
+# SCRIPTS_BASE_DIR will be defined inside the function using current_app.config
+
+def execute_python_script(script_relative_path, input_params_list=None, timeout_seconds=30):
+    """
+    Executes a Python script securely using subprocess.
+    Args:
+        script_relative_path (str): The relative path to the .py file from the configured UPLOAD_FOLDER/scripts.
+                                    Example: 'some_script_dir/my_script.py'
+        input_params_list (list, optional): A list of strings to be passed as command-line arguments.
+        timeout_seconds (int, optional): Maximum execution time.
+    Returns:
+        dict: {'status': 'success'|'error'|'timeout', 'output': str, 'error': str, 'exit_code': int|None}
+    """
+    if input_params_list is None:
+        input_params_list = []
+
+    scripts_upload_subfolder = 'scripts'  # As used in add_script_route
+
+    # Construct absolute path to the main scripts directory
+    configured_upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+    if not os.path.isabs(configured_upload_folder):
+        # If UPLOAD_FOLDER is relative, it's typically relative to app.instance_path or app.root_path.
+        # Flask's default instance_path is app.root_path/instance.
+        # Let's assume for consistency with file uploads, it's relative to app.root_path if not absolute.
+        abs_upload_folder = os.path.join(current_app.root_path, configured_upload_folder)
+    else:
+        abs_upload_folder = configured_upload_folder
+
+    scripts_base_dir = os.path.abspath(os.path.join(abs_upload_folder, scripts_upload_subfolder))
+
+    # Ensure scripts_base_dir exists (it should if scripts are being added)
+    if not os.path.isdir(scripts_base_dir):
+        current_app.logger.error(f"Scripts base directory does not exist: {scripts_base_dir}")
+        return {'status': 'error', 'output': '', 'error': 'Scripts directory configuration error.', 'exit_code': None}
+
+    full_script_path = os.path.abspath(os.path.join(scripts_base_dir, script_relative_path))
+    script_directory = os.path.dirname(full_script_path)
+
+    if not os.path.isfile(full_script_path):
+        return {'status': 'error', 'output': '', 'error': f'Script file not found at {full_script_path}. Relative path: {script_relative_path}', 'exit_code': None}
+    if not full_script_path.endswith('.py'):
+        return {'status': 'error', 'output': '', 'error': 'Invalid script file type (must be .py).', 'exit_code': None}
+
+    # Security Check: Ensure the resolved full_script_path is truly within the intended scripts_base_dir
+    if not os.path.abspath(full_script_path).startswith(scripts_base_dir):
+         current_app.logger.warning(f"Attempt to access script outside base directory: {full_script_path} vs {scripts_base_dir}")
+         return {'status': 'error', 'output': '', 'error': 'Script path is outside allowed directory.', 'exit_code': None}
+
+    command = [sys.executable, full_script_path] + [str(p) for p in input_params_list]
+
+    try:
+        process = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            cwd=script_directory,
+            check=False  # Do not raise exception for non-zero exit codes
+        )
+
+        output_str = process.stdout.strip() if process.stdout else ""
+        error_str = process.stderr.strip() if process.stderr else ""
+
+        MAX_STDOUT_SIZE = 1 * 1024 * 1024
+        MAX_STDERR_SIZE = 512 * 1024
+
+        if len(output_str) > MAX_STDOUT_SIZE:
+            output_str = output_str[:MAX_STDOUT_SIZE] + "\n[... Output truncated ...]"
+        if len(error_str) > MAX_STDERR_SIZE:
+            error_str = error_str[:MAX_STDERR_SIZE] + "\n[... Error output truncated ...]"
+
+        if process.returncode == 0:
+            return {'status': 'success', 'output': output_str, 'error': error_str, 'exit_code': process.returncode}
+        else:
+            main_error_msg = error_str if error_str else f"Script exited with error code {process.returncode}."
+            if not error_str and output_str:
+                main_error_msg += f" Output: {output_str[:200]}" # Append some stdout if no stderr
+            return {'status': 'error', 'output': output_str,
+                    'error': main_error_msg,
+                    'exit_code': process.returncode}
+
+    except subprocess.TimeoutExpired:
+        return {'status': 'timeout', 'output': '', 'error': f'Script execution timed out after {timeout_seconds} seconds.', 'exit_code': None}
+    except Exception as e:
+        current_app.logger.error(f"Subprocess execution system error for {script_relative_path}: {str(e)}")
+        return {'status': 'error', 'output': '', 'error': f'An internal system error occurred during script execution.', 'exit_code': None}
+
 
 # إنشاء Blueprint
 bp = Blueprint('main', __name__)
@@ -245,10 +338,12 @@ def register():
 @bp.route('/client-login', methods=['GET', 'POST'])
 def client_login():
     if current_user.is_authenticated:
-        dashboard = check_role_and_redirect()
-        if dashboard:
-            return redirect(url_for(f'main.{dashboard}'))
-        return redirect(url_for('main.homepage'))
+        if current_user.is_super_admin:
+            return redirect(url_for('main.super_admin_dashboard'))
+        elif current_user.is_admin: # This case should ideally not happen if admins use /admin-login
+            return redirect(url_for('main.admin_dashboard'))
+        else: # Is a client
+            return redirect(url_for('main.client_dashboard'))
 
     if request.method == 'POST':
         try:
@@ -294,9 +389,9 @@ def admin_login():
             return redirect(url_for('main.super_admin_dashboard'))
         elif current_user.is_admin:
             return redirect(url_for('main.admin_dashboard'))
-        else:
-            flash("غير مصرح لك بالدخول هنا.", "danger")
-            return redirect(url_for('main.homepage'))
+        else: # A client user trying to access /admin-login or already logged in
+            flash("غير مصرح لك بالدخول هنا أو أنك بالفعل مسجل دخول كمستخدم عادي.", "info") # Changed message slightly
+            return redirect(url_for('main.client_dashboard')) # Redirect client to their dashboard
 
     if request.method == 'POST':
         try:
@@ -377,6 +472,25 @@ def reset_password_request():
         flash("حدث خطأ أثناء معالجة الطلب. الرجاء المحاولة مرة أخرى.", "danger")
         
     return redirect(url_for('main.admin_login')) # Keep this, as it's for the modal on admin_login page. The new usage will also redirect.
+
+@bp.route('/reset-password/<token>', methods=['GET', 'POST'], endpoint='reset_password')
+def reset_password(token):
+    user = User.verify_reset_password_token(token)
+    if not user:
+        flash('الرابط الخاص بإعادة تعيين كلمة المرور غير صالح أو انتهت صلاحيته.', 'danger')
+        return redirect(url_for('main.client_login')) # Or admin_login, depending on typical user
+
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user.password = generate_password_hash(form.password.data)
+        db.session.commit()
+        flash('تم تحديث كلمة المرور بنجاح! يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.', 'success')
+        # Determine redirect based on user role if possible, otherwise default to client_login
+        if user.role == Role.ADMIN or user.role == Role.SUPER_ADMIN:
+            return redirect(url_for('main.admin_login'))
+        return redirect(url_for('main.client_login'))
+
+    return render_template('reset_password.html', form=form, token=token, now=datetime.utcnow())
 
 # This existing route is used by a modal on the admin_login page.
 # We will now also use it from the super_admin_dashboard.
@@ -529,41 +643,37 @@ def admin_dashboard():
         flash("حدث خطأ أثناء تحميل لوحة التحكم", "danger")
         return redirect(url_for('main.homepage'))
 
-@bp.route('/client')
-@client_required
+@bp.route('/client', endpoint='client_dashboard') # Assuming this is being repurposed
+@login_required
+@client_required # Ensure this decorator is appropriate for brokers, or a new one is needed.
 def client_dashboard():
-    # Calculate statistics for the client dashboard
-    user_id = current_user.id
+    # Stats for Real Estate Broker
+    total_properties = Property.query.filter_by(user_id=current_user.id).count()
 
-    # Active scripts: Count of UserScript entries for the current_user
-    active_scripts_count = UserScript.query.filter_by(user_id=user_id).count() # Assuming UserScript implies active/assigned
+    # Placeholder stats for deals until deal management is implemented
+    # Corrected querying for deals (assuming Deal model is available and user_id links to the broker)
+    deals_in_progress_count = Deal.query.filter(Deal.user_id == current_user.id, Deal.stage.notin_(['Closed - Won', 'Closed - Lost'])).count() if db.inspect(Deal).has_table() else 0
+    completed_deals_count = Deal.query.filter(Deal.user_id == current_user.id, Deal.stage == 'Closed - Won').count() if db.inspect(Deal).has_table() else 0
 
-    # Today's operations: Count of RunLog entries for the current_user created today
-    today_start = datetime.combine(date.today(), datetime.min.time())
-    today_end = datetime.combine(date.today(), datetime.max.time())
-    today_operations_count = RunLog.query.filter(
-        RunLog.user_id == user_id,
-        RunLog.executed_at >= today_start,
-        RunLog.executed_at <= today_end
-    ).count()
+    # Placeholder for revenue estimation - this requires a field like 'deal_value' or 'commission_amount' on the Deal model
+    # For now, let's assume it's based on property price of 'Closed - Won' deals if no specific value field.
+    # This is highly speculative and needs a proper field in Deal model.
+    revenue_estimation = db.session.query(db.func.sum(Property.price)).join(Deal, Deal.property_id == Property.id).filter(Deal.user_id == current_user.id, Deal.stage == 'Closed - Won').scalar() or 0.0 if db.inspect(Deal).has_table() else 0.0
 
-    # Successful operations: Count of RunLog entries for the current_user with status == 'success'
-    # Assuming 'success' is the indicator. Adjust if it's different (e.g., 'completed')
-    successful_operations_count = RunLog.query.filter_by(user_id=user_id, status='success').count()
-                                                                        # Make sure 'success' is the correct status string
 
-    # Recent operations: A list of the last 5-10 RunLog entries for the current_user
-    recent_operations = RunLog.query.filter_by(user_id=user_id)\
-                                    .order_by(RunLog.executed_at.desc())\
-                                    .limit(5).all() # Fetching last 5, can be adjusted
+    # Placeholder for recent activity - for now, just fetch last 5 properties added by user
+    recent_activities = Property.query.filter_by(user_id=current_user.id)\
+                                  .order_by(Property.created_at.desc())\
+                                  .limit(5).all()
 
-    stats = {
-        'active_scripts': active_scripts_count,
-        'today_operations': today_operations_count,
-        'successful_operations': successful_operations_count,
-    }
-
-    return render_template('client_dashboard.html', stats=stats, recent_operations=recent_operations, now=datetime.utcnow())
+    return render_template('client/dashboard.html', # Changed template path
+                                   total_properties=total_properties,
+                                   deals_in_progress_count=deals_in_progress_count,
+                                   completed_deals_count=completed_deals_count,
+                                   revenue_estimation=revenue_estimation,
+                                   recent_activities=recent_activities,
+                                   now=datetime.utcnow() # Added now
+                                  )
 
 @bp.route('/client/my-scripts', endpoint='client_my_scripts')
 @login_required
@@ -631,32 +741,463 @@ def client_profile():
 
     return render_template('client/profile.html', profile_form=profile_form, password_form=password_form, now=datetime.utcnow())
 
-@bp.route('/manage_users')
+@bp.route('/client/properties/map', methods=['GET'], endpoint='client_add_property_map')
 @login_required
+@client_required
+def client_add_property_map():
+    user_properties = Property.query.filter_by(user_id=current_user.id).all()
+    # Convert properties to a JSON string to be easily embedded in the template for JavaScript
+    properties_data = []
+    for prop in user_properties:
+        properties_data.append({
+            "title": prop.title,
+            "lat": prop.latitude,
+            "lng": prop.longitude,
+            "type": prop.type,
+            "price": prop.price,
+            "url": "#" # Placeholder for url_for('main.client_edit_property', property_id=prop.id)
+        })
+    properties_json = json.dumps(properties_data)
+    form = PropertyForm() # Instantiate the form for the modal
+    return render_template('client/property_map.html', properties_json=properties_json, form=form, now=datetime.utcnow())
+
+@bp.route('/client/properties/add', methods=['POST'], endpoint='client_add_property')
+@login_required
+@client_required
+def client_add_property():
+    form = PropertyForm(request.form) # Pass request.form explicitly for non-AJAX POST with separate hidden fields
+    latitude = request.form.get('latitude', type=float)
+    longitude = request.form.get('longitude', type=float)
+
+    if not latitude or not longitude:
+        flash('الموقع (خط العرض وخط الطول) مطلوب. يرجى تحديد نقطة على الخريطة.', 'danger')
+        return redirect(url_for('main.client_add_property_map'))
+
+    if form.validate(): # validate_on_submit() might not work as expected if lat/lng are not part of the WTForm class
+        try:
+            new_property = Property(
+                user_id=current_user.id,
+                title=form.title.data,
+                type=form.type.data,
+                price=form.price.data,
+                area=form.area.data,
+                rooms=form.rooms.data,
+                description=form.description.data,
+                latitude=latitude,
+                longitude=longitude
+                # created_at and updated_at have defaults
+            )
+            db.session.add(new_property)
+            db.session.commit()
+            flash(f'تمت إضافة العقار "{new_property.title}" بنجاح!', 'success')
+            return redirect(url_for('main.client_add_property_map')) # Redirect back to map, new property will show
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error adding property: {str(e)}")
+            flash('حدث خطأ أثناء إضافة العقار. يرجى المحاولة مرة أخرى.', 'danger')
+    else:
+        # Collect WTForm errors and flash them
+        error_messages = []
+        for field, errors in form.errors.items():
+            for error in errors:
+                error_messages.append(f"{getattr(form, field).label.text}: {error}")
+        if error_messages: # Flash only if there are actual form validation errors
+             flash("فشل التحقق من النموذج: " + "؛ ".join(error_messages), 'danger')
+
+    # If validation fails or other issues, redirect back to the map page.
+    # User will lose modal state and data in hidden fields if not handled by JS to repopulate,
+    # but form data submitted would be lost anyway on a simple redirect.
+    # Flashed messages will be displayed on the map page.
+    return redirect(url_for('main.client_add_property_map'))
+
+@bp.route('/client/properties', methods=['GET'], endpoint='client_manage_properties')
+@login_required
+@client_required
+def client_manage_properties():
+    page = request.args.get('page', 1, type=int)
+    property_type_filter = request.args.get('type_filter', None)
+
+    query = Property.query.filter_by(user_id=current_user.id)
+    if property_type_filter and property_type_filter != 'all' and property_type_filter != '':
+        query = query.filter(Property.type == property_type_filter)
+
+    properties_pagination = query.order_by(Property.created_at.desc()).paginate(page=page, per_page=10, error_out=False)
+
+    # Get distinct property types for filter dropdown, ensuring they are not None or empty
+    distinct_types_query = db.session.query(Property.type)\
+        .filter(Property.user_id == current_user.id, Property.type.isnot(None), Property.type != '')\
+        .distinct().all()
+    available_types = [ptype[0] for ptype in distinct_types_query]
+
+    return render_template('client/property_list.html',
+                           properties_pagination=properties_pagination,
+                           available_types=available_types,
+                           current_type_filter=property_type_filter if property_type_filter else 'all', # ensure 'all' is default if None
+                           now=datetime.utcnow())
+
+@bp.route('/client/properties/<int:property_id>/edit', methods=['GET', 'POST'], endpoint='client_edit_property')
+@login_required
+@client_required
+def client_edit_property(property_id):
+    property_to_edit = Property.query.filter_by(id=property_id, user_id=current_user.id).first_or_404()
+    form = PropertyForm(obj=property_to_edit) # Pre-populate form with existing data
+
+    original_lat = property_to_edit.latitude
+    original_lng = property_to_edit.longitude
+
+    if form.validate_on_submit(): # This will be true for POST requests if form data is valid
+        try:
+            property_to_edit.title = form.title.data
+            property_to_edit.type = form.type.data
+            property_to_edit.price = form.price.data
+            property_to_edit.area = form.area.data
+            property_to_edit.rooms = form.rooms.data
+            property_to_edit.description = form.description.data
+
+            # Get lat/lng from hidden fields in the form for potential re-positioning
+            new_latitude = request.form.get('latitude', type=float)
+            new_longitude = request.form.get('longitude', type=float)
+
+            if new_latitude and new_longitude:
+                property_to_edit.latitude = new_latitude
+                property_to_edit.longitude = new_longitude
+
+            property_to_edit.updated_at = datetime.utcnow() # Manually set updated_at
+            db.session.commit()
+            flash(f'تم تحديث العقار "{property_to_edit.title}" بنجاح!', 'success')
+            return redirect(url_for('main.client_manage_properties'))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error editing property {property_id}: {str(e)}")
+            flash('حدث خطأ أثناء تحديث العقار. يرجى المحاولة مرة أخرى.', 'danger')
+
+    # For GET requests, or if form validation failed on POST:
+    # Pass original coordinates for map centering.
+    # The form object (form) will contain submitted values and errors if validation failed.
+    # Ensure hidden fields in template are populated with these values for JS to pick up on load.
+    if request.method == 'POST' and not form.validate(): # If POST failed validation
+        # Keep submitted values for hidden fields if they exist, else use original
+        current_lat_for_map = request.form.get('latitude', original_lat, type=float)
+        current_lng_for_map = request.form.get('longitude', original_lng, type=float)
+        flash('الرجاء تصحيح الأخطاء في النموذج.', 'danger')
+    else: # For GET requests
+        current_lat_for_map = original_lat
+        current_lng_for_map = original_lng
+
+
+    return render_template('client/edit_property.html',
+                           form=form,
+                           property_id=property_id,
+                           property_title=property_to_edit.title,
+                           current_lat=current_lat_for_map,
+                           current_lng=current_lng_for_map,
+                           now=datetime.utcnow())
+
+@bp.route('/client/properties/<int:property_id>/delete', methods=['POST'], endpoint='client_delete_property')
+@login_required
+@client_required
+def client_delete_property(property_id):
+    property_to_delete = Property.query.filter_by(id=property_id, user_id=current_user.id).first_or_404()
+
+    try:
+        # Note: If Deal model has property_id as ForeignKey without ondelete='CASCADE',
+        # and related deals exist, this will fail.
+        # For now, proceeding with direct delete as per subtask instructions.
+        # Example: Deal.query.filter_by(property_id=property_to_delete.id, user_id=current_user.id).delete()
+
+        # Check for related deals and prevent deletion if they exist, or handle them.
+        # This check assumes Deal model is imported and has a 'property_id' field.
+        if hasattr(Deal, 'query') and Deal.query.filter_by(property_id=property_to_delete.id).first():
+            flash(f'لا يمكن حذف العقار "{property_to_delete.title}" لأنه مرتبط بصفقات حالية. يرجى التعامل مع الصفقات أولاً.', 'danger')
+            return redirect(url_for('main.client_manage_properties'))
+
+        db.session.delete(property_to_delete)
+        db.session.commit()
+        flash(f'تم حذف العقار "{property_to_delete.title}" بنجاح.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting property {property_id}: {str(e)}")
+        flash('حدث خطأ أثناء حذف العقار. يرجى المحاولة مرة أخرى.', 'danger')
+
+    return redirect(url_for('main.client_manage_properties'))
+
+@bp.route('/client/marketing-tools', methods=['GET'], endpoint='client_marketing_tools')
+@login_required
+@client_required
+def client_marketing_tools():
+    # This page might have dynamic elements in the future, but for now, it's static content.
+    return render_template('client/marketing_tools.html', now=datetime.utcnow())
+
+@bp.route('/client/deals', methods=['GET'], endpoint='client_deal_tracker') # Name matches dashboard link
+@login_required
+@client_required
+def client_deal_tracker():
+    page = request.args.get('page', 1, type=int)
+
+    # Fetch deals associated with the current user (broker)
+    # Joining with Property to display property title
+    deals_query = db.session.query(Deal, Property.title.label('property_title'))\
+        .join(Property, Deal.property_id == Property.id)\
+        .filter(Deal.user_id == current_user.id) # Assuming Deal.user_id is the broker
+
+    # Example filtering by stage (can be expanded)
+    deal_stage_filter = request.args.get('stage_filter', 'all')
+    if deal_stage_filter and deal_stage_filter != 'all' and deal_stage_filter != '':
+        deals_query = deals_query.filter(Deal.stage == deal_stage_filter)
+
+    deals_pagination = deals_query.order_by(Deal.updated_at.desc()).paginate(page=page, per_page=10, error_out=False)
+
+    # Get distinct deal stages for filter dropdown
+    distinct_stages_query = db.session.query(Deal.stage)\
+        .filter(Deal.user_id == current_user.id, Deal.stage.isnot(None), Deal.stage != '')\
+        .distinct()
+    available_stages = [d_stage[0] for d_stage in distinct_stages_query.all()]
+
+    return render_template('client/deal_list.html',
+                           deals_pagination=deals_pagination,
+                           available_stages=available_stages,
+                           current_stage_filter=deal_stage_filter if deal_stage_filter else 'all',
+                           deal_stages_config=DEAL_STAGES, # Pass DEAL_STAGES for the dropdown
+                           now=datetime.utcnow())
+
+@bp.route('/client/deals/<int:deal_id>/change-stage', methods=['POST'], endpoint='client_change_deal_stage')
+@login_required
+@client_required
+def client_change_deal_stage(deal_id):
+    deal_to_update = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
+    new_stage = request.form.get('new_stage')
+
+    # DEAL_STAGES is imported from .forms
+    valid_stages = [stage_tuple[0] for stage_tuple in DEAL_STAGES]
+    if not new_stage or new_stage not in valid_stages:
+        flash('مرحلة غير صالحة.', 'danger') # Invalid stage selected.
+        return redirect(url_for('main.client_deal_tracker'))
+
+    if deal_to_update.stage == new_stage:
+        flash(f'الصفقة بالفعل في مرحلة "{new_stage}".', 'info') # Deal is already in the "{new_stage}" stage.
+    else:
+        deal_to_update.stage = new_stage
+        deal_to_update.updated_at = datetime.utcnow()
+        try:
+            db.session.commit()
+            flash(f'تم تحديث مرحلة الصفقة إلى "{new_stage}" بنجاح!', 'success') # Deal stage updated to "{new_stage}" successfully!
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error changing deal stage for deal {deal_id}: {str(e)}")
+            flash('حدث خطأ أثناء تحديث مرحلة الصفقة.', 'danger') # An error occurred while updating the deal stage.
+
+    # Preserve pagination and filter context on redirect
+    page = request.form.get('page', 1, type=int)
+    stage_filter = request.form.get('stage_filter', 'all')
+    return redirect(url_for('main.client_deal_tracker',
+                            page=page,
+                            stage_filter=stage_filter if stage_filter != 'all' else None)) # Pass None if 'all' for cleaner URL
+
+@bp.route('/client/deals/pipeline', methods=['GET'], endpoint='client_deal_pipeline')
+@login_required
+@client_required
+def client_deal_pipeline():
+    deals_by_stage = OrderedDict() # Use OrderedDict to maintain stage order
+    # DEAL_STAGES is imported from .forms
+    for stage_value, stage_display in DEAL_STAGES:
+        deals_by_stage[stage_value] = {
+            'display_name': stage_display, # Store display name for easier access in template
+            'deals': []
+        }
+
+    # Fetch all deals for the user, joining with Property for property_title
+    user_deals = db.session.query(Deal, Property.title.label('property_title'))\
+        .join(Property, Deal.property_id == Property.id)\
+        .filter(Deal.user_id == current_user.id)\
+        .order_by(Deal.updated_at.desc()).all() # Order by update time within stages
+
+    for deal_tuple in user_deals:
+        deal_object = deal_tuple[0]
+        # Dynamically adding property_title to the deal_object for easier template access
+        deal_object.property_title = deal_tuple[1]
+
+        if deal_object.stage in deals_by_stage:
+            deals_by_stage[deal_object.stage]['deals'].append(deal_object)
+        else:
+            # Handle deals with stages not in DEAL_STAGES (e.g. old/invalid stage)
+            # Optionally, create an 'Other' category or log this occurrence
+            if '_OTHER_' not in deals_by_stage: # Use a distinct key for uncategorized
+                 deals_by_stage['_OTHER_'] = {'display_name': 'Other / Uncategorized', 'deals': []}
+            deals_by_stage['_OTHER_']['deals'].append(deal_object)
+            current_app.logger.warning(f"Deal ID {deal_object.id} has an unknown stage: {deal_object.stage}")
+
+
+    return render_template('client/deal_pipeline.html',
+                           deals_by_stage=deals_by_stage,
+                           # deal_stages_config is not strictly needed if deals_by_stage has display names
+                           # But can be passed if template iterates it for columns independently
+                           deal_stages_config=DEAL_STAGES,
+                           now=datetime.utcnow())
+
+@bp.route('/client/deals/<int:deal_id>/edit', methods=['GET', 'POST'], endpoint='client_edit_deal')
+@login_required
+@client_required
+def client_edit_deal(deal_id):
+def client_edit_deal(deal_id):
+def client_add_deal():
+    form = DealForm()
+    # Populate property choices for the current user (broker)
+    form.property_id.choices = [
+        (prop.id, prop.title) for prop in Property.query.filter_by(user_id=current_user.id).order_by(Property.title).all()
+    ]
+    if not form.property_id.choices:
+        form.property_id.choices.insert(0, ('', 'لا توجد عقارات متاحة - قم بإضافة عقار أولاً'))
+    else:
+        form.property_id.choices.insert(0, ('', '-- اختر عقاراً --'))
+
+    if request.method == 'POST':
+        # Re-populate choices in case of POST for validation, as they are not persisted in the form object across requests.
+        # This is crucial for SelectField validation to work correctly with dynamic choices.
+        # Note: This is slightly redundant if validate_on_submit() is used and choices are not changed between GET and POST,
+        # but it's safer if the list of properties could change or if not using validate_on_submit() strictly.
+        form.property_id.choices = [(p.id, p.title) for p in Property.query.filter_by(user_id=current_user.id).order_by(Property.title).all()]
+        if not form.property_id.choices:
+             form.property_id.choices.insert(0, ('', 'لا توجد عقارات متاحة - قم بإضافة عقار أولاً'))
+        else:
+            form.property_id.choices.insert(0, ('', '-- اختر عقاراً --'))
+
+
+        if form.validate_on_submit():
+            selected_property_id = form.property_id.data
+            # Verify selected property actually belongs to user
+            prop_check = Property.query.filter_by(id=selected_property_id, user_id=current_user.id).first()
+            if not prop_check:
+                flash("العقار المحدد غير صالح.", "danger")
+                return render_template('client/add_deal.html', form=form, title="إضافة صفقة جديدة", now=datetime.utcnow())
+
+            new_deal = Deal(
+                property_id=selected_property_id,
+                user_id=current_user.id, # Broker's ID
+                client_name=form.client_name.data,
+                stage=form.stage.data,
+                notes=form.notes.data
+                # created_at and updated_at have defaults
+            )
+            try:
+                db.session.add(new_deal)
+                db.session.commit()
+                flash(f'تمت إضافة الصفقة للعقار "{prop_check.title}" مع العميل "{new_deal.client_name}" بنجاح!', 'success')
+                return redirect(url_for('main.client_deal_tracker'))
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error adding deal: {str(e)}")
+                flash('حدث خطأ أثناء إضافة الصفقة. يرجى المحاولة مرة أخرى.', 'danger')
+        else:
+            flash('الرجاء تصحيح الأخطاء في النموذج.', 'danger')
+
+    # For GET request or if POST validation failed
+    return render_template('client/add_deal.html', form=form, title="إضافة صفقة جديدة", now=datetime.utcnow())
+
+@bp.route('/client/resources', methods=['GET'], endpoint='client_resources')
+@login_required
+@client_required
+def client_resources():
+    # Similar to marketing tools, this page is initially static.
+    return render_template('client/resources.html', now=datetime.utcnow())
+
+@bp.route('/client/deals', methods=['GET'], endpoint='client_deal_tracker')
+@login_required
+@client_required
+def client_deal_tracker():
+    page = request.args.get('page', 1, type=int)
+
+    deals_query = db.session.query(Deal, Property.title.label('property_title'))\
+        .join(Property, Deal.property_id == Property.id)\
+        .filter(Deal.user_id == current_user.id)
+
+    deal_stage_filter = request.args.get('stage_filter', 'all')
+    # Ensure stage_filter is not None before comparing, and handle 'all'
+    if deal_stage_filter and deal_stage_filter != 'all' and deal_stage_filter != '':
+        deals_query = deals_query.filter(Deal.stage == deal_stage_filter)
+
+    deals_pagination = deals_query.order_by(Deal.updated_at.desc()).paginate(page=page, per_page=10, error_out=False)
+
+    distinct_stages_query = db.session.query(Deal.stage)\
+        .filter(Deal.user_id == current_user.id, Deal.stage.isnot(None), Deal.stage != '')\
+        .distinct()
+    available_stages = [d_stage[0] for d_stage in distinct_stages_query.all() if d_stage[0]]
+
+
+    return render_template('client/deal_list.html',
+                           deals_pagination=deals_pagination,
+                           available_stages=available_stages,
+                           current_stage_filter=deal_stage_filter if deal_stage_filter else 'all', # Ensure 'all' if None
+                           deal_stages_config=DEAL_STAGES, # Already passing this from the other definition, ensure it's consistent
+                           now=datetime.utcnow())
+
+@bp.route('/manage_users')
+@admin_required # Changed from @login_required
 def manage_users():
-    if not current_user.is_admin:
-        flash("غير مصرح لك بالدخول هنا.", "danger")
-        return redirect(url_for('main.homepage'))
+    # The @admin_required decorator handles auth and base role check.
+    # The previous "if not current_user.is_admin:" check is now redundant.
         
-    users = User.query.all()
+    users = User.query.all() # This might need pagination for many users
     return render_template('manage_users.html', users=users)
 
-@bp.route('/manage_users/<int:user_id>/<action>')
-@login_required
+@bp.route('/manage_users/<int:user_id>/<action>', methods=['GET', 'POST']) # Added methods to include POST
+@admin_required # Changed from @login_required
 def manage_user_action(user_id, action):
-    if not current_user.is_admin:
-        flash("غير مصرح لك بالدخول هنا.", "danger")
-        return redirect(url_for('main.homepage'))
+    # The @admin_required decorator handles base auth and role check.
+    # The initial broad "if not current_user.is_admin:" check is redundant.
     
     try:
         target_user = User.query.get_or_404(user_id)
 
-        # Permission check: Allow if super_admin, or if admin and has MANAGE_USERS permission
-        if not current_user.is_super_admin:
-            if not (current_user.is_admin and current_user.has_permission(Permission.MANAGE_USERS)):
-                flash("ليس لديك الصلاحية الكافية للقيام بهذا الإجراء.", "danger")
-                # Redirect to where the admin usually manages users or a general dashboard
+        # Specific permission check for the action being performed
+        # This existing detailed permission logic for 'toggle_status' is good and should be preserved.
+        if action == 'toggle_status': # This specific permission check is more granular than just @admin_required
+            if not current_user.is_super_admin and not current_user.has_permission(Permission.MANAGE_USERS):
+                flash("ليس لديك الصلاحية الكافية لتغيير حالة المستخدم.", "danger")
                 return redirect(url_for('main.admin_dashboard'))
+
+            # Ensure POST for state changes
+            if request.method == 'POST':
+                if not current_user.is_super_admin and target_user.role != Role.USER:
+                    flash("لا يمكنك تعديل حالة هذا المستخدم.", "warning")
+                    return redirect(url_for('main.admin_dashboard'))
+
+                if target_user.role == Role.SUPER_ADMIN: # Super admins cannot be toggled here
+                    flash("لا يمكن تعديل حالة حساب سوبر أدمن آخر من هنا.", "danger")
+                    return redirect(url_for('main.admin_dashboard'))
+
+                if target_user.id == current_user.id: # Prevent self-deactivation
+                    flash("لا يمكنك تغيير حالتك الخاصة.", "warning")
+                    return redirect(url_for('main.admin_dashboard'))
+
+                target_user.is_active = not target_user.is_active
+                db.session.commit()
+                flash(f"تم {'تفعيل' if target_user.is_active else 'تعطيل'} حساب المستخدم {target_user.username} بنجاح.", "success")
+            else: # GET request for toggle_status (if still linked this way from some old template)
+                 flash("الإجراء غير صالح. يجب أن يتم عبر POST لتغيير الحالة.", "warning")
+
+            # Redirect after action
+            if current_user.is_super_admin:
+                return redirect(url_for('main.super_admin_dashboard'))
+            return redirect(url_for('main.admin_dashboard'))
+
+        # Placeholder for other potential actions like 'delete_user', 'edit_user_permissions_by_admin' etc.
+        # Each would have its own specific permission checks if necessary.
+        flash(f"Action '{action}' on user {target_user.username} is not fully implemented or recognized.", "info")
+        if current_user.is_super_admin:
+            return redirect(url_for('main.super_admin_dashboard'))
+        return redirect(url_for('main.admin_dashboard'))
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"خطأ في إدارة المستخدم: {str(e)}") # Generic error message
+        flash("حدث خطأ أثناء إدارة المستخدم.", "danger")
+        # Redirect to a sensible page
+        if 'manage_users' in request.referrer:
+            return redirect(url_for('main.manage_users'))
+        if current_user.is_super_admin:
+            return redirect(url_for('main.super_admin_dashboard'))
+        return redirect(url_for('main.admin_dashboard'))
 
         if action == 'toggle_status':
             if request.method == 'POST':
@@ -702,6 +1243,137 @@ def manage_user_action(user_id, action):
         current_app.logger.error(f"خطأ في تحديث حالة المستخدم: {str(e)}")
         flash("حدث خطأ أثناء تحديث حالة المستخدم", "danger")
         return redirect(url_for('main.manage_users'))
+
+# --- Script Execution Route ---
+@bp.route('/client/script/<int:userscript_id>/execute', methods=['POST'], endpoint='client_execute_script')
+@login_required
+@client_required
+def client_execute_script(userscript_id):
+    userscript = UserScript.query.filter_by(id=userscript_id, user_id=current_user.id).first_or_404()
+    script_model = userscript.script
+
+    if not script_model:
+        current_app.logger.error(f"No script model found for UserScript ID: {userscript_id}")
+        return jsonify({'status': 'error', 'error_message': 'Associated script details not found.'}), 404
+
+    if not script_model.file_path:
+        current_app.logger.error(f"Script model ID {script_model.id} has no file_path defined.")
+        return jsonify({'status': 'error', 'error_message': 'Script file path not configured.'}), 500
+
+    # --- Parameter Validation (Revised) ---
+    submitted_params = request.json
+    if not isinstance(submitted_params, dict):
+        return jsonify({'status': 'error', 'error_message': 'Invalid parameters format. Expected JSON object.'}), 400
+
+    # script_model.parameters is expected to be a dict like {"param_name1": "Description1", ...}
+    # or an empty dict if no parameters are defined.
+    script_param_definitions = script_model.parameters if isinstance(script_model.parameters, dict) else {}
+
+    validated_params_for_script = []
+    validation_errors = []
+
+    # Iterate based on the order of keys in script_param_definitions (Python 3.7+ dicts preserve insertion order)
+    # This means the script should expect parameters in the order they were defined by the admin.
+    for param_name in script_param_definitions.keys():
+        if param_name not in submitted_params:
+            # Assuming all defined parameters are required.
+            # The description (value in script_param_definitions) can be used in the error message.
+            param_label = script_param_definitions[param_name] if isinstance(script_param_definitions[param_name], str) else param_name
+            validation_errors.append(f"Parameter '{param_label}' (name: {param_name}) is required.")
+        else:
+            validated_params_for_script.append(str(submitted_params[param_name]))
+
+    # If script_param_definitions is empty, and submitted_params is not, this is okay;
+    # script might not need params, or might use a generic **kwargs.
+    # If script_param_definitions is NOT empty, but submitted_params IS empty (and params were required by above loop):
+    # validation_errors will be populated.
+
+    if validation_errors:
+        return jsonify({'status': 'error', 'error_message': 'Validation failed.', 'errors': validation_errors}), 400
+
+    # --- Execute Script ---
+    execution_result = execute_python_script(
+        script_relative_path=script_model.file_path,
+        input_params_list=validated_params_for_script,
+        timeout_seconds=current_app.config.get('SCRIPT_EXECUTION_TIMEOUT', 60)
+    )
+
+    # --- Log Execution ---
+    run_log_entry = None
+    try:
+        run_log_entry = RunLog(
+            user_script_id=userscript.id,
+            user_id=current_user.id,
+            script_id=script_model.id,
+            input_parameters=json.dumps(submitted_params),
+            status=execution_result['status'],
+            output=execution_result['output'],
+            error=execution_result['error'],
+            executed_at=datetime.utcnow()
+        )
+        db.session.add(run_log_entry)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback() # Rollback logging failure
+        current_app.logger.error(f"Error logging script execution for userscript {userscript_id}: {str(e)}")
+        # The script execution already happened. We should still return its result.
+        # Optionally, add a specific warning to the response if logging fails.
+        if execution_result['status'] == 'success': # If script was fine, but logging failed
+            # Add a non-critical error to the response about logging
+            execution_result['warning_message'] = 'Script executed successfully, but there was an issue logging the execution details.'
+        # If script already failed, its error is more important.
+        pass
+
+    return jsonify({
+        'status': execution_result['status'],
+        'output': execution_result['output'],
+        'error_message': execution_result.get('error'), # Use .get() for safety
+        'warning_message': execution_result.get('warning_message'), # Include warning if set
+        'run_log_id': run_log_entry.id if run_log_entry and hasattr(run_log_entry, 'id') else None
+    })
+
+@bp.route('/client/scripts', methods=['GET'], endpoint='client_my_assigned_scripts')
+@login_required
+@client_required
+def client_my_assigned_scripts():
+    # Fetch UserScript entries, joining with Script and Product for details
+    assigned_scripts_data = db.session.query(
+        UserScript.id.label('userscript_id'),
+        Product.name.label('product_name'),
+        Product.description.label('product_description'),
+        Script.id.label('script_id'),
+        Script.parameters.label('script_parameters_definition') # For building the execution form later
+    ).join(Script, UserScript.script_id == Script.id)\
+     .join(Product, Script.id == Product.script_id)\
+     .filter(UserScript.user_id == current_user.id)\
+     .filter(Product.type == ProductType.SCRIPT)\
+     .filter(Product.is_active == True)\
+     .order_by(Product.name).all()
+
+    scripts_with_logs = []
+    for item in assigned_scripts_data:
+        last_logs = RunLog.query.filter_by(user_script_id=item.userscript_id, user_id=current_user.id)\
+                              .order_by(RunLog.executed_at.desc())\
+                              .limit(3).all()
+
+        # Ensure script_parameters_definition is a dict before json.dumps
+        # If it's None or not a dict, default to an empty dict for json.dumps
+        params_def = item.script_parameters_definition
+        if not isinstance(params_def, dict):
+            params_def = {}
+
+        scripts_with_logs.append({
+            'userscript_id': item.userscript_id,
+            'product_name': item.product_name,
+            'product_description': item.product_description,
+            'script_id': item.script_id,
+            'script_parameters_definition_json': json.dumps(params_def), # Ensure it's valid JSON
+            'last_logs': last_logs
+        })
+
+    return render_template('client/assigned_scripts_list.html',
+                           assigned_scripts=scripts_with_logs,
+                           now=datetime.utcnow())
 
 # --- End of Admin User Management (for regular admins, if any) ---
 
