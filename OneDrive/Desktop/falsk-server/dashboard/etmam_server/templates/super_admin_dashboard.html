@@ -468,7 +468,7 @@
                     <h5 class="modal-title">تعديل المشرف {{ admin.full_name }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{{ url_for('main.homepage') }}" method="post"> {# Placeholder: Missing route main.superadmin_edit_admin_details #}
+                <form action="{{ url_for('main.superadmin_edit_admin_details', admin_id=admin.id) }}" method="post">
                     {{ csrf_token() }}
                     <div class="modal-body">
                         <div class="mb-3">
@@ -501,7 +501,7 @@
                     <h5 class="modal-title">تعديل صلاحيات {{ admin.full_name }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{{ url_for('main.homepage') }}" method="post"> {# Placeholder: Missing route main.superadmin_edit_admin_permissions #}
+                <form action="{{ url_for('main.superadmin_edit_admin_permissions', admin_id=admin.id) }}" method="post">
                     {{ csrf_token() }}
                     <div class="modal-body">
                         {% for permission in permissions %}
@@ -534,7 +534,7 @@
                     <h5 class="modal-title">إعادة تعيين كلمة المرور - {{ admin.full_name }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{{ url_for('main.homepage') }}" method="post"> {# Placeholder: Missing route main.superadmin_reset_admin_password #}
+                <form action="{{ url_for('main.superadmin_reset_admin_password', admin_id=admin.id) }}" method="post">
                     {{ csrf_token() }}
                     <div class="modal-body">
                         <div class="mb-3">

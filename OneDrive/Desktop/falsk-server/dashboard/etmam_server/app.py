@@ -696,15 +696,37 @@ def client_my_scripts():
 @client_required
 def client_my_logs():
     page = request.args.get('page', 1, type=int)
-    # Querying RunLog and labeling Script.name as 'script_name'
-    logs_pagination = db.session.query(RunLog, Script.name.label('script_name'))\
+    userscript_id_filter = request.args.get('userscript_id_filter', None, type=int)
+
+    query = db.session.query(RunLog, Script.name.label('script_name'))\
         .join(Script, RunLog.script_id == Script.id)\
-        .filter(RunLog.user_id == current_user.id)\
-        .order_by(RunLog.executed_at.desc())\
+        .filter(RunLog.user_id == current_user.id)
+
+    filter_active_script_name = None
+
+    if userscript_id_filter is not None:
+        user_script_to_filter = UserScript.query.filter_by(id=userscript_id_filter, user_id=current_user.id).first()
+        if user_script_to_filter:
+            query = query.filter(RunLog.user_script_id == userscript_id_filter)
+            script_for_filter = Script.query.get(user_script_to_filter.script_id)
+            if script_for_filter:
+                product_for_filter = Product.query.filter_by(script_id=script_for_filter.id, type=ProductType.SCRIPT).first()
+                if product_for_filter:
+                    filter_active_script_name = product_for_filter.name
+                else:
+                    filter_active_script_name = script_for_filter.name # Fallback to script's internal name
+        else:
+            flash("Invalid or unauthorized script filter. Showing all logs instead.", "warning")
+            userscript_id_filter = None # Reset to show all logs
+
+    logs_pagination = query.order_by(RunLog.executed_at.desc())\
         .paginate(page=page, per_page=10, error_out=False)
 
-    # logs_pagination.items will be a list of tuples (run_log_obj, script_name_str)
-    return render_template('client/my_logs.html', logs_pagination=logs_pagination, now=datetime.utcnow())
+    return render_template('client/my_logs.html',
+                           logs_pagination=logs_pagination,
+                           userscript_id_filter=userscript_id_filter,
+                           filter_active_script_name=filter_active_script_name,
+                           now=datetime.utcnow())
 
 @bp.route('/client/profile', methods=['GET', 'POST'], endpoint='client_profile')
 @login_required
@@ -1864,6 +1886,104 @@ def add_user_by_superadmin():
         db.session.rollback()
         current_app.logger.error(f"Error adding user by superadmin: {str(e)}")
         flash('حدث خطأ أثناء إضافة المستخدم.', 'danger')
+
+    return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/super-admin/admin/<int:admin_id>/edit-details', methods=['POST'], endpoint='superadmin_edit_admin_details')
+@login_required
+@super_admin_required
+def superadmin_edit_admin_details(admin_id):
+    admin_user = User.query.get_or_404(admin_id)
+    if admin_user.role != Role.ADMIN:
+        flash("This action can only be performed on Admin accounts.", "warning")
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    new_full_name = request.form.get('full_name')
+    new_email = request.form.get('email')
+    new_phone = request.form.get('phone')
+    original_email = admin_user.email
+
+    if not new_full_name or len(new_full_name) < 3:
+        flash("Full name is required and must be at least 3 characters.", "danger")
+    elif not new_email: # Basic email presence check
+        flash("Email is required.", "danger")
+    else:
+        admin_user.full_name = new_full_name
+        admin_user.phone = new_phone # Assuming phone is optional or validated client-side
+
+        email_changed = (new_email != original_email)
+        email_valid_for_update = True # Assume true unless a problem is found
+        if email_changed:
+            existing_user_with_new_email = User.query.filter(User.email == new_email, User.id != admin_id).first()
+            if existing_user_with_new_email:
+                flash(f"Email '{new_email}' is already taken by another user.", "danger")
+                email_valid_for_update = False
+            else:
+                admin_user.email = new_email
+
+        if email_valid_for_update: # Only proceed if email (if changed) is valid
+            if hasattr(admin_user, 'updated_at'): # Check if model has this attribute
+                 admin_user.updated_at = datetime.utcnow()
+            try:
+                db.session.commit()
+                flash(f"Admin '{admin_user.username}' details updated successfully.", "success")
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error updating admin {admin_id} details: {str(e)}")
+                flash("Error updating admin details. Please check logs.", "danger")
+        # If email_valid_for_update is false, a flash message about email is already set.
+
+    return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/super-admin/admin/<int:admin_id>/edit-permissions', methods=['POST'], endpoint='superadmin_edit_admin_permissions')
+@login_required
+@super_admin_required
+def superadmin_edit_admin_permissions(admin_id):
+    admin_user = User.query.get_or_404(admin_id)
+    if admin_user.role != Role.ADMIN:
+        flash("Permissions can only be set for Admin accounts.", "warning")
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    permissions_list = request.form.getlist('permissions[]')
+
+    admin_user.set_permissions(permissions_list) # Assumes User model has set_permissions method
+    if hasattr(admin_user, 'updated_at'): # Check if model has this attribute
+        admin_user.updated_at = datetime.utcnow()
+
+    try:
+        db.session.commit()
+        flash(f"Permissions for admin '{admin_user.username}' updated successfully.", "success")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating admin {admin_id} permissions: {str(e)}")
+        flash("Error updating admin permissions. Please check logs.", "danger")
+
+    return redirect(url_for('main.super_admin_dashboard'))
+
+@bp.route('/super-admin/admin/<int:admin_id>/reset-password', methods=['POST'], endpoint='superadmin_reset_admin_password')
+@login_required
+@super_admin_required
+def superadmin_reset_admin_password(admin_id):
+    admin_user = User.query.get_or_404(admin_id)
+    if admin_user.role != Role.ADMIN:
+        flash("Password can only be reset for Admin accounts.", "warning")
+        return redirect(url_for('main.super_admin_dashboard'))
+
+    new_password = request.form.get('password')
+
+    if not new_password or len(new_password) < 6: # Basic validation
+        flash("New password must be at least 6 characters long.", "danger")
+    else:
+        admin_user.password = generate_password_hash(new_password) # Ensure generate_password_hash is imported
+        if hasattr(admin_user, 'updated_at'): # Check if model has this attribute
+            admin_user.updated_at = datetime.utcnow()
+        try:
+            db.session.commit()
+            flash(f"Password for admin '{admin_user.username}' has been reset successfully.", "success")
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error resetting admin {admin_id} password: {str(e)}")
+            flash("Error resetting admin password. Please check logs.", "danger")
 
     return redirect(url_for('main.super_admin_dashboard'))
 
