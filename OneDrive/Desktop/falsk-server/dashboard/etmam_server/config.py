@@ -77,6 +77,9 @@ class Config:
     OPTIMIZE_DB_QUERIES = True
     USE_DB_INDEXES = True
     ENABLE_QUERY_CACHING = True
+
+    # Script Execution Settings
+    SCRIPT_EXECUTION_TIMEOUT = 60 # Default timeout for script execution in seconds
     
     @staticmethod
     def init_app(app):

@@ -175,15 +175,25 @@ class RunLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     script_id = db.Column(db.Integer, db.ForeignKey('scripts.id', name='fk_runlog_script'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', name='fk_runlog_user'), nullable=False)
-    status = db.Column(db.String(20), nullable=False)
+
+    # Link to UserScript if this specific assignment's execution is being logged
+    user_script_id = db.Column(db.Integer, db.ForeignKey('user_script.id'), nullable=False) # Kept as nullable=False
+
+    status = db.Column(db.String(20), nullable=False)  # e.g., 'success', 'error', 'timeout'
+
+    input_parameters = db.Column(db.Text, nullable=True) # To store JSON string of input params
+
     output = db.Column(db.Text, nullable=True)
     error = db.Column(db.Text, nullable=True)
-    executed_at = db.Column(db.DateTime, default=datetime.now)
-    user_script_id = db.Column(db.Integer, db.ForeignKey('user_script.id'), nullable=False)
+    executed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False) # Changed default to utcnow, added nullable=False
 
+    # Relationships
     user = db.relationship('User', backref=db.backref('run_logs', cascade="all, delete-orphan"))
-    script = db.relationship('Script', backref=db.backref('run_logs', cascade="all, delete-orphan"))
+    script = db.relationship('Script', backref=db.backref('script_run_logs', cascade="all, delete-orphan")) # Renamed backref
     user_script = db.relationship('UserScript', backref=db.backref('run_logs', cascade="all, delete-orphan"), foreign_keys=[user_script_id])
+
+    def __repr__(self):
+        return f'<RunLog {self.id} for Script {self.script_id} by User {self.user_id} at {self.executed_at}>'
 
 class ProductType:
     SCRIPT = 'script'

@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}"> {# Added CSRF Meta Tag #}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}منصة إتمام{% endblock %}</title>
     
@@ -83,9 +84,9 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    {# Changed main.my_scripts to main.client_dashboard as my_scripts route doesn't exist #}
-                                    <a class="nav-link" href="{{ url_for('main.client_dashboard') }}">
-                                        <i class="fas fa-code"></i> سكربتاتي (الرئيسية)
+                                    {# Points to the new SaaS script execution page #}
+                                    <a class="nav-link" href="{{ url_for('main.client_my_assigned_scripts') }}">
+                                        <i class="fas fa-rocket"></i> سكربتاتي التشاركية
                                     </a>
                                 </li>
                                 <li class="nav-item">
@@ -94,16 +95,16 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                     {# Changed main.script_logs to main.client_dashboard as script_logs route doesn't exist #}
-                                    <a class="nav-link" href="{{ url_for('main.client_dashboard') }}">
-                                        <i class="fas fa-history"></i> السجل (الرئيسية)
+                                    {# Points to the client's own operation log page #}
+                                    <a class="nav-link" href="{{ url_for('main.client_my_logs') }}">
+                                        <i class="fas fa-history"></i> سجل عملياتي
                                     </a>
                                 </li>
                             {% endif %}
                             <li class="nav-item">
-                                {# Changed main.profile to main.homepage as profile route doesn't exist #}
-                                <a class="nav-link" href="{{ url_for('main.homepage') }}">
-                                    <i class="fas fa-user"></i> الملف الشخصي (الرئيسية)
+                                {# Points to the client's profile page #}
+                                <a class="nav-link" href="{{ url_for('main.client_profile') }}">
+                                    <i class="fas fa-user"></i> ملفي الشخصي
                                 </a>
                             </li>
                             <li class="nav-item">

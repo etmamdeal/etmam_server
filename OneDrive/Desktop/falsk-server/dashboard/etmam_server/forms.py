@@ -76,3 +76,22 @@ class PropertyForm(FlaskForm):
     def validate_type(self, field):
         if not field.data: # Handles the default empty choice
             raise ValidationError("Please select a valid property type.")
+
+
+DEAL_STAGES = [
+    ('New Lead', 'New Lead'),
+    ('Showing Scheduled', 'Showing Scheduled'),
+    ('Negotiation', 'Negotiation'),
+    ('Contract Signing', 'Contract Signing'),
+    ('Pending - Finance/Inspection', 'Pending - Finance/Inspection'),
+    ('Closed - Won', 'Closed - Won'),
+    ('Closed - Lost', 'Closed - Lost'),
+    ('On Hold', 'On Hold')
+]
+
+class DealForm(FlaskForm):
+    property_id = SelectField('Associated Property', coerce=int, validators=[DataRequired(message="Please select a property.")])
+    client_name = StringField('Client Name (Buyer/Renter)', validators=[DataRequired(), Length(min=2, max=120)])
+    stage = SelectField('Deal Stage', choices=DEAL_STAGES, validators=[DataRequired()])
+    notes = TextAreaField('Notes', validators=[Optional(), Length(max=5000)])
+    submit = SubmitField('Save Deal')
